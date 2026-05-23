@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('applicant_id')->constrained('applicants')->cascadeOnDelete();
             $table->foreignId('batch_id')->constrained('batches')->cascadeOnDelete();
+
             $table->string('status')->default('pending')->comment('Enum Ref: ApplicationStatusEnum');
             $table->timestamps();
 

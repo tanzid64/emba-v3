@@ -85,7 +85,7 @@
         <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
             <p class="px-3 mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">Menu</p>
 
-            <a href="#"
+            <a href="{{ route('applicant.dashboard') }}"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors
                     {{ request()->routeIs('applicant.dashboard') ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}"
                 style="{{ request()->routeIs('applicant.dashboard') ? 'background:#2F1B72;' : '' }}"
@@ -94,8 +94,10 @@
                 Dashboard
             </a>
 
-            <a href="#"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            <a href="{{ route('applicant.application.flow') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors
+                    {{ request()->routeIs('applicant.application.flow') ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}"
+                style="{{ request()->routeIs('applicant.application.flow') ? 'background:#2F1B72;' : '' }}"
             >
                 <x-lucide-clipboard-list class="size-4 shrink-0" />
                 Application Flow
