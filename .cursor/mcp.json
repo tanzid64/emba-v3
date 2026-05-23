@@ -1,0 +1,20 @@
+{
+    "mcpServers": {
+        "lerd": {
+            "args": [
+                "mcp"
+            ],
+            "command": "lerd",
+            "env": {
+                "LERD_SITE_PATH": "/home/dark/Development/emba-admission-v3"
+            }
+        },
+        "laravel-boost": {
+            "command": "php",
+            "args": [
+                "artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}

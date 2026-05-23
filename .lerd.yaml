@@ -1,0 +1,12 @@
+domains:
+    - emba-admission-v3
+php_version: "8.4"
+node_version: "22"
+framework: laravel
+framework_version: "13"
+secured: true
+services:
+    - mysql
+    - mailpit
+workers:
+    - vite

@@ -1,0 +1,13 @@
+{
+    "mcpServers": {
+        "lerd": {
+            "args": [
+                "mcp"
+            ],
+            "command": "lerd",
+            "env": {
+                "LERD_SITE_PATH": "/home/dark/Development/emba-admission-v3"
+            }
+        }
+    }
+}
