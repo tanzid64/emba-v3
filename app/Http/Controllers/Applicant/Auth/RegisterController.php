@@ -19,9 +19,12 @@ class RegisterController extends Controller
             return redirect()->route('applicant.dashboard');
         }
 
-        $hasActiveBatch = Batch::active()->exists();
+        $activeBatch = Batch::active()->first();
 
-        return view('pages::applicant.auth.register', compact('hasActiveBatch'));
+        return view('pages::applicant.auth.register', [
+            'hasActiveBatch' => $activeBatch !== null,
+            'activeBatch' => $activeBatch,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -32,9 +35,13 @@ class RegisterController extends Controller
             'password' => ['required', 'string', Password::default(), 'confirmed'],
         ]);
 
-        $applicant = Applicant::create($validated);
-
         $activeBatch = Batch::active()->first();
+
+        $applicant = Applicant::create([
+            ...$validated,
+            'batch_id' => $activeBatch?->id,
+        ]);
+
         if ($activeBatch) {
             $applicant->applications()->create(['batch_id' => $activeBatch->id]);
         }

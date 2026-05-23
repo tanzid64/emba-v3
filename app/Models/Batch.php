@@ -24,6 +24,16 @@ class Batch extends Model
         return $query->where('status', BatchStatusEnum::OPEN);
     }
 
+    public function applicants(): HasMany
+    {
+        return $this->hasMany(Applicant::class);
+    }
+
+    public function profiles(): HasMany
+    {
+        return $this->hasMany(ApplicantProfile::class);
+    }
+
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('applicants', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('batch_id')->constrained()->onDelete('cascade');
             $table->string('email')->unique();
             $table->string('phone_number')->comment('Applicant phone number');
             $table->timestamp('email_verified_at')->nullable();

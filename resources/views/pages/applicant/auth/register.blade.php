@@ -31,7 +31,9 @@
             <div class="text-center mb-8">
                 <p class="text-xs font-bold uppercase tracking-widest mb-2" style="color:#8b072b;">New Application</p>
                 <h1 class="font-inter font-bold text-2xl sm:text-3xl text-gray-900">Create your account</h1>
-                <p class="text-gray-500 text-sm mt-2">Start your FBS EMBA application today</p>
+                @if ($activeBatch)
+                    <p class="text-gray-500 text-sm mt-2">Registering for <span class="font-semibold" style="color:#2F1B72;">{{ $activeBatch->name }}</span></p>
+                @endif
             </div>
 
             <div class="bg-white rounded-2xl shadow-xl p-8">
