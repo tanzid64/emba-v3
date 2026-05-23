@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -32,8 +33,13 @@ class Applicant extends Authenticatable implements MustVerifyEmail
         $this->notify(new ApplicantVerifyEmail);
     }
 
-    public function sendPasswordResetNotification(string $token): void
+    public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ApplicantResetPassword($token));
+    }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class);
     }
 }

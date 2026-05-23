@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Applicant\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
+use App\Models\Batch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,7 +19,9 @@ class RegisterController extends Controller
             return redirect()->route('applicant.dashboard');
         }
 
-        return view('pages::applicant.auth.register');
+        $hasActiveBatch = Batch::active()->exists();
+
+        return view('pages::applicant.auth.register', compact('hasActiveBatch'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -30,6 +33,11 @@ class RegisterController extends Controller
         ]);
 
         $applicant = Applicant::create($validated);
+
+        $activeBatch = Batch::active()->first();
+        if ($activeBatch) {
+            $applicant->applications()->create(['batch_id' => $activeBatch->id]);
+        }
 
         auth('applicant')->login($applicant);
 

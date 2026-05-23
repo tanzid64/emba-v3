@@ -1,4 +1,15 @@
-<x-layouts::applicant.guest>
+<?php
+
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
+use Livewire\Component;
+
+new #[Title('FBS EMBA Admission — University of Dhaka')]
+#[Layout('layouts.applicant.guest')]
+class extends Component {
+}; ?>
+
+<div>
 
     {{-- HERO --}}
     <section class="hero-bg relative min-h-[520px] md:min-h-[580px] flex items-center">
@@ -13,11 +24,11 @@
                     The business degree that Bangladesh trusts.
                 </h2>
                 <div class="flex flex-wrap gap-4">
-                    <a href="#" class="inline-flex items-center gap-2 px-7 py-3 rounded font-bold text-white text-sm transition-opacity hover:opacity-90 shadow-lg" style="background:#2F1B72;">
-                        Apply Now <i class="fa-solid fa-arrow-right text-xs"></i>
+                    <a href="{{ route('applicant.register') }}" class="inline-flex items-center gap-2 px-7 py-3 rounded font-bold text-white text-sm transition-opacity hover:opacity-90 shadow-lg" style="background:#2F1B72;">
+                        Apply Now <x-lucide-arrow-right class="size-3.5" />
                     </a>
                     <a href="#" target="_blank" class="inline-flex items-center gap-2 px-7 py-3 rounded font-bold text-white text-sm transition-opacity hover:opacity-90 shadow-lg" style="background:#da3129;">
-                        View Circular <i class="fa-solid fa-arrow-right text-xs"></i>
+                        View Circular <x-lucide-arrow-right class="size-3.5" />
                     </a>
                 </div>
             </div>
@@ -39,20 +50,20 @@
                     </p>
                     <ul class="space-y-4">
                         <li class="flex items-start gap-3">
-                            <span class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs" style="background:#58b325;">
-                                <i class="fa-solid fa-check" style="font-size:9px;"></i>
+                            <span class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white" style="background:#58b325;">
+                                <x-lucide-check class="size-3" />
                             </span>
                             <span class="text-gray-700">Strengthen employability and gain practical business skills</span>
                         </li>
                         <li class="flex items-start gap-3">
-                            <span class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs" style="background:#58b325;">
-                                <i class="fa-solid fa-check" style="font-size:9px;"></i>
+                            <span class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white" style="background:#58b325;">
+                                <x-lucide-check class="size-3" />
                             </span>
                             <span class="text-gray-700">Switch from technical or general backgrounds into business roles</span>
                         </li>
                         <li class="flex items-start gap-3">
-                            <span class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs" style="background:#58b325;">
-                                <i class="fa-solid fa-check" style="font-size:9px;"></i>
+                            <span class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white" style="background:#58b325;">
+                                <x-lucide-check class="size-3" />
                             </span>
                             <span class="text-gray-700">Earn the credibility of Dhaka University's most respected business degree</span>
                         </li>
@@ -112,17 +123,17 @@
                 <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-5">
                     @php
                         $reasons = [
-                            ['icon' => 'fa-graduation-cap', 'label' => 'Dhaka University Prestige'],
-                            ['icon' => 'fa-clock',          'label' => 'Evening Flexibility'],
-                            ['icon' => 'fa-suitcase',       'label' => 'Career Transition Focus'],
-                            ['icon' => 'fa-heart',          'label' => 'Strong Alumni Network'],
-                            ['icon' => 'fa-layer-group',    'label' => 'Case-Based, Practical Learning'],
+                            ['icon' => 'graduation-cap', 'label' => 'Dhaka University Prestige'],
+                            ['icon' => 'clock',          'label' => 'Evening Flexibility'],
+                            ['icon' => 'briefcase',      'label' => 'Career Transition Focus'],
+                            ['icon' => 'heart',          'label' => 'Strong Alumni Network'],
+                            ['icon' => 'layers',         'label' => 'Case-Based, Practical Learning'],
                         ];
                     @endphp
                     @foreach ($reasons as $r)
                         <div class="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300" style="background:#fafafa;">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 text-white text-2xl shadow-md" style="background:#8b072b;">
-                                <i class="fa-solid {{ $r['icon'] }}"></i>
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 text-white shadow-md" style="background:#8b072b;">
+                                @svg('lucide-' . $r['icon'], 'size-6')
                             </div>
                             <h5 class="font-semibold text-gray-800 text-sm leading-snug">{{ $r['label'] }}</h5>
                         </div>
@@ -170,11 +181,11 @@
                     </h3>
                     <p class="text-white/70 text-base">Applications for FBS EMBA (8th Batch) are now open.</p>
                 </div>
-                <a href="#" class="shrink-0 inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white text-base transition-opacity hover:opacity-90 shadow-lg" style="background:#8b072b;">
-                    Apply Now <i class="fa-solid fa-arrow-right"></i>
+                <a href="{{ route('applicant.register') }}" class="shrink-0 inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white text-base transition-opacity hover:opacity-90 shadow-lg" style="background:#8b072b;">
+                    Apply Now <x-lucide-arrow-right class="size-4" />
                 </a>
             </div>
         </div>
     </section>
 
-</x-layouts::applicant.guest>
+</div>

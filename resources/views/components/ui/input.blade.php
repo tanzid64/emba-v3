@@ -25,7 +25,7 @@
 <div class="relative" x-data="{ val: '' }">
     @if ($icon)
         <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-zinc-400">
-            <x-icon name="{{ 'lucide.' . $icon }}" class="size-4" />
+            @svg('lucide-' . $icon, 'size-4')
         </div>
     @endif
 
@@ -36,7 +36,7 @@
         <button type="button" x-show="val !== ''" x-cloak
             @click="val = ''; $refs.input.value = ''; $refs.input.dispatchEvent(new Event('input')); $refs.input.focus()"
             class="absolute inset-y-0 end-0 flex items-center pe-2.5 text-zinc-400 hover:text-zinc-600 :text-zinc-300">
-            <x-icon name="lucide.x" class="size-3.5" />
+            <x-lucide-x class="size-3.5" />
         </button>
     @endif
 </div>
