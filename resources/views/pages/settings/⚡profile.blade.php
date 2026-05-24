@@ -1,8 +1,8 @@
 <?php
 
 use App\Concerns\ProfileValidationRules;
+use App\Support\Toast;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Computed;
@@ -41,7 +41,7 @@ new #[Title('Profile settings')] class extends Component {
 
         $user->save();
 
-        Flux::toast(variant: 'success', text: __('Profile updated.'));
+        Toast::success(__('Profile updated.'));
     }
 
     /**

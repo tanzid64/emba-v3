@@ -91,9 +91,7 @@
         {{ $slot }}
 
         @persist('toast')
-            <flux:toast.group>
-                <flux:toast />
-            </flux:toast.group>
+            <x-ui.toast />
         @endpersist
 
         @fluxScripts
