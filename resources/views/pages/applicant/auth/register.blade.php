@@ -77,7 +77,7 @@
                             value="{{ old('phone_number') }}"
                             required
                             autocomplete="tel"
-                            placeholder="+880 1XXX-XXXXXX"
+                            placeholder="01XXX-XXXXXX"
                             class="w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 focus:outline-none focus:ring-2 transition {{ $errors->has('phone_number') ? 'border-red-400 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400' }}"
                         >
                     </div>
