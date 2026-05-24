@@ -8,6 +8,7 @@ use App\Enums\GenderEnum;
 use App\Enums\MaritalStatus;
 use App\Enums\ReligionEnum;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class ApplicantProfile extends Model
 {
@@ -24,6 +25,29 @@ class ApplicantProfile extends Model
         'created_at' => DateFormatCast::class,
         'updated_at' => DateFormatCast::class,
     ];
+
+    protected $appends = [
+        'photo_url',
+        'photo_path',
+    ];
+
+    public function getPhotoUrlAttribute(): string
+    {
+        if ($this->photo) {
+            return Storage::disk('public')->exists($this->photo) ? asset('storage/'.$this->photo) : asset('assets/images/default-avatar.png');
+        }
+
+        return asset('assets/images/default-avatar.png');
+    }
+
+    public function getPhotoPathAttribute(): string
+    {
+        if ($this->photo && Storage::disk('public')->exists($this->photo)) {
+            return storage_path('app/public/'.$this->photo);
+        }
+
+        return public_path('assets/images/default-avatar.png');
+    }
 
     public function applicant()
     {

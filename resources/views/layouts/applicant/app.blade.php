@@ -16,7 +16,13 @@
     </style>
 </head>
 
-<body class="bg-gray-50 text-gray-700 antialiased" x-data="{ sidebarOpen: false }">
+<body
+    class="bg-gray-50 text-gray-700 antialiased"
+    x-data="{ sidebarOpen: false }"
+    x-effect="document.body.style.overflow = sidebarOpen && window.innerWidth < 1024 ? 'hidden' : ''"
+    @keydown.escape.window="sidebarOpen = false"
+    @resize.window.debounce.150ms="if (window.innerWidth >= 1024) sidebarOpen = false"
+>
 
     {{-- ===================== HEADER ===================== --}}
     <header class="fixed top-0 inset-x-0 z-50 bg-white border-b border-gray-200" style="height:64px;">
@@ -69,16 +75,25 @@
 
     {{-- ===================== SIDEBAR ===================== --}}
     <aside
-        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-        class="fixed top-0 left-0 z-40 h-full w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 lg:top-[64px] lg:h-[calc(100vh-64px)]"
+        :class="sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'"
+        class="fixed top-0 left-0 z-40 h-dvh w-[85vw] max-w-xs sm:w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 ease-in-out overflow-y-auto lg:!translate-x-0 lg:!shadow-none lg:top-[64px] lg:h-[calc(100vh-64px)] lg:w-64"
     >
-        {{-- Mobile: logo inside sidebar --}}
-        <div class="lg:hidden flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
-            <img src="{{ asset('assets/logo/logo.jpg') }}" alt="University of Dhaka" class="h-10 w-auto">
-            <div class="leading-tight">
-                <p class="font-inter font-bold text-sm text-gray-900">FBS EMBA</p>
-                <p class="font-inter text-xs font-medium text-gray-400">Applicant Portal</p>
+        {{-- Mobile: logo + close inside sidebar --}}
+        <div class="lg:hidden flex items-center justify-between gap-2.5 px-5 py-4 border-b border-gray-100">
+            <div class="flex items-center gap-2.5">
+                <img src="{{ asset('assets/logo/logo.jpg') }}" alt="University of Dhaka" class="h-10 w-auto">
+                <div class="leading-tight">
+                    <p class="font-inter font-bold text-sm text-gray-900">FBS EMBA</p>
+                    <p class="font-inter text-xs font-medium text-gray-400">Applicant Portal</p>
+                </div>
             </div>
+            <button
+                @click="sidebarOpen = false"
+                class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                aria-label="Close sidebar"
+            >
+                <x-lucide-x class="size-5" />
+            </button>
         </div>
 
         {{-- Navigation --}}
@@ -86,6 +101,7 @@
             <p class="px-3 mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">Menu</p>
 
             <a href="{{ route('applicant.dashboard') }}"
+                @click="sidebarOpen = false"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors
                     {{ request()->routeIs('applicant.dashboard') ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}"
                 style="{{ request()->routeIs('applicant.dashboard') ? 'background:#2F1B72;' : '' }}"
@@ -95,6 +111,7 @@
             </a>
 
             <a href="{{ route('applicant.application.flow') }}"
+                @click="sidebarOpen = false"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors
                     {{ request()->routeIs('applicant.application.flow') ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}"
                 style="{{ request()->routeIs('applicant.application.flow') ? 'background:#2F1B72;' : '' }}"
@@ -103,8 +120,11 @@
                 Application Flow
             </a>
 
-            <a href="#"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            <a href="{{ route('applicant.profile') }}"
+                @click="sidebarOpen = false"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors
+                    {{ request()->routeIs('applicant.profile') ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}"
+                style="{{ request()->routeIs('applicant.profile') ? 'background:#2F1B72;' : '' }}"
             >
                 <x-lucide-user-circle class="size-4 shrink-0" />
                 Profile
@@ -131,6 +151,8 @@
             {{ $slot }}
         </div>
     </main>
+
+    <x-ui.toast />
 
 </body>
 </html>

@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('father_name');
             $table->string('mother_name');
             $table->date('date_of_birth');
+            $table->string('photo')->nullable();
 
             $table->string('gender', 1)->default(GenderEnum::OTHER->value);
             $table->string('blood_group')->default(BloodGroup::UNKNOWN->value);
