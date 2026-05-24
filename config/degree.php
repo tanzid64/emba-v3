@@ -1,6 +1,6 @@
 <?php
 
-return [
+$degrees = [
     [
         'label' => 'S.S.C / Equivalent',
         'description' => 'The applicant has completed their Secondary School Certificate or an equivalent qualification.',
@@ -78,6 +78,7 @@ return [
         'has_options' => false,
         'board_type' => 'input',
         'sub_type' => 'input',
+
     ],
     [
         'label' => 'Other Degree',
@@ -96,4 +97,28 @@ return [
             'CA / CMA'
         ],
     ]
+];
+
+$scales = [
+    [
+        'label' => 'Out of 10.00',
+        'value' => '10.00',
+    ],
+    [
+        'label' => 'Out of 5.00',
+        'value' => '5.00',
+    ],
+    [
+        'label' => 'Out of 4.00',
+        'value' => '4.00',
+    ],
+    [
+        'label' => 'Class System',
+        'value' => 'Class System',
+    ]
+];
+
+return [
+    'degrees' => $degrees,
+    'scales' => $scales,
 ];
