@@ -6,7 +6,7 @@
             ],
             "command": "lerd",
             "env": {
-                "LERD_SITE_PATH": "/home/dark/Development/emba-admission-v3"
+                "LERD_SITE_PATH": "/home/dark/development/emba-v3"
             }
         }
     }
