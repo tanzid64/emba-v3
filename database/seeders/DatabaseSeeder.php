@@ -21,5 +21,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(BatchSeeder::class);
+        $this->call(ApplicantSeeder::class);
+        $this->call(DistrictSeeder::class);
+        $this->call(UpazilaSeeder::class);
     }
 }

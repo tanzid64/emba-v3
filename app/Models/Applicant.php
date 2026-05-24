@@ -51,6 +51,11 @@ class Applicant extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Batch::class);
     }
 
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
+    }
+
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
