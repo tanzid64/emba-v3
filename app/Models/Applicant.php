@@ -56,6 +56,11 @@ class Applicant extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Address::class);
     }
 
+    public function expHistories()
+    {
+        return $this->hasMany(ExpHistory::class);
+    }
+
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
