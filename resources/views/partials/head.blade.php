@@ -13,4 +13,15 @@
 
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+<script>
+    // Default first-time visitors to light mode. Once set, the user's choice
+    // from the Appearance settings page (light / dark / system) takes over.
+    if (!window.localStorage.getItem('flux.appearance.bootstrapped')) {
+        window.localStorage.setItem('flux.appearance.bootstrapped', '1');
+        if (!window.localStorage.getItem('flux.appearance')) {
+            window.localStorage.setItem('flux.appearance', 'light');
+        }
+    }
+</script>
 @fluxAppearance
