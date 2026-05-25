@@ -9,7 +9,7 @@
         };
     @endphp
 
-    <div class="flex h-full w-full flex-1 flex-col gap-6 p-6 rounded-xl">
+    <div class="flex h-full w-full flex-1 flex-col gap-4 rounded-xl p-3 sm:p-4 lg:gap-6 lg:p-6">
 
         {{-- Dashboard header --}}
         <div class="flex items-start justify-between flex-wrap gap-3 pb-4 border-b border-zinc-100">

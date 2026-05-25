@@ -54,7 +54,7 @@ class extends Component {
     $experiences = $applicant?->expHistories?->sortBy('id') ?? collect();
 @endphp
 
-<div class="flex h-full w-full flex-1 flex-col gap-6 p-6">
+<div class="flex h-full w-full flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-6 lg:p-6">
 
     {{-- Header --}}
     <div class="flex items-start justify-between gap-3 flex-wrap">

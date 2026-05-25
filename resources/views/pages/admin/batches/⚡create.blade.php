@@ -125,7 +125,7 @@ class extends Component {
     $sectionDescription = 'text-xs text-zinc-500 mb-5';
 @endphp
 
-<div class="flex h-full w-full flex-1 flex-col gap-6 rounded-xl p-6">
+<div class="flex h-full w-full flex-1 flex-col gap-4 rounded-xl p-3 sm:p-4 lg:gap-6 lg:p-6">
 
     {{-- Header --}}
     <div class="flex items-start justify-between flex-wrap gap-3">

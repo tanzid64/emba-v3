@@ -511,7 +511,7 @@ class extends Component {
     ];
 @endphp
 
-<div class="flex h-full w-full flex-1 flex-col gap-6 p-6"
+<div class="flex h-full w-full flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-6 lg:p-6"
     x-data="{
         tab: 'profile',
         validTabs: ['profile', 'addresses', 'education', 'experience'],
