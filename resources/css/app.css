@@ -26,6 +26,16 @@
     --color-accent: var(--color-neutral-800);
     --color-accent-content: var(--color-neutral-800);
     --color-accent-foreground: var(--color-white);
+
+    /* Brand palette — derived from the home page's primary blue/purple. */
+    --color-brand: #2f1b72;            /* primary blue used on welcome CTAs */
+    --color-brand-dark: #221353;        /* hover */
+    --color-brand-deep: #0c1d6b;        /* deeper navy accent */
+    --color-brand-soft: #f4f4f8;        /* light tinted backgrounds */
+    --color-brand-secondary: #8b072b;   /* secondary maroon (applicant portal accents) */
+    --color-brand-secondary-dark: #73061f;
+    --color-brand-accent: #a27126;
+    --color-brand-success: #58b325;
 }
 
 @layer theme {
