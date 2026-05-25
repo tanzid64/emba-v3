@@ -24,5 +24,9 @@ class DatabaseSeeder extends Seeder
         $this->call(ApplicantSeeder::class);
         $this->call(DistrictSeeder::class);
         $this->call(UpazilaSeeder::class);
+        $this->call(ApplicantProfileSeeder::class);
+        $this->call(AddressSeeder::class);
+        $this->call(EducationHistorySeeder::class);
+        $this->call(ExpHistorySeeder::class);
     }
 }
