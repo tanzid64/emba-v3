@@ -755,6 +755,10 @@ class extends Component {
                             <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
                                 <x-lucide-check class="size-3" /> Uploaded
                             </span>
+                        @elseif (! $hasExistingPhoto && ! $photo)
+                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
+                                <x-lucide-alert-circle class="size-3" /> Not uploaded
+                            </span>
                         @endif
                     </div>
 
