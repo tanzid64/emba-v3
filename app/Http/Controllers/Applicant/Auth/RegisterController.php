@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Applicant\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
+use App\Models\Application;
 use App\Models\Batch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ class RegisterController extends Controller
         ]);
 
         if ($activeBatch) {
-            $applicant->applications()->create(['batch_id' => $activeBatch->id]);
+            Application::draftFor($applicant->setRelation('batch', $activeBatch));
         }
 
         auth('applicant')->login($applicant);
