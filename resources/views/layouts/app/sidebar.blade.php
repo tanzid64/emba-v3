@@ -106,6 +106,12 @@
                         {{ __('Admission Batch') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                <flux:sidebar.group :heading="__('Help')" class="grid">
+                    <flux:sidebar.item icon="book-open-text" :href="route('admin.docs')" :current="request()->routeIs('admin.docs')" wire:navigate>
+                        {{ __('Documentation') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
