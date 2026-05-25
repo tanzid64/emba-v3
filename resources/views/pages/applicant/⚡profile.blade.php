@@ -77,6 +77,10 @@ class extends Component {
     /** @var array<int, array<string, mixed>> */
     public array $experiences = [];
 
+    public bool $isLocked = false;
+
+    public ?string $lockedApplicationNumber = null;
+
     public function mount(): void
     {
         $applicant = auth('applicant')->user()->load([
@@ -85,6 +89,13 @@ class extends Component {
             'educationHistories',
             'expHistories',
         ]);
+
+        $application = $applicant->applications()
+            ->where('batch_id', $applicant->batch_id)
+            ->first();
+
+        $this->isLocked = $application?->is_applied ?? false;
+        $this->lockedApplicationNumber = $this->isLocked ? $application?->application_number : null;
 
         $this->email = $applicant->email;
         $this->phone_number = $applicant->phone_number;
@@ -225,11 +236,19 @@ class extends Component {
 
     public function addExperience(): void
     {
+        if ($this->blockIfLocked()) {
+            return;
+        }
+
         $this->experiences[] = $this->blankExperience();
     }
 
     public function removeExperience(int $index): void
     {
+        if ($this->blockIfLocked()) {
+            return;
+        }
+
         unset($this->experiences[$index]);
         $this->experiences = array_values($this->experiences);
 
@@ -241,6 +260,12 @@ class extends Component {
     public function updatedPhoto(): void
     {
         $this->resetPhotoRules();
+
+        if ($this->blockIfLocked()) {
+            $this->photo = null;
+
+            return;
+        }
 
         if (! $this->photo instanceof TemporaryUploadedFile) {
             return;
@@ -269,6 +294,10 @@ class extends Component {
 
     public function removePhoto(): void
     {
+        if ($this->blockIfLocked()) {
+            return;
+        }
+
         $this->photo = null;
         $this->resetPhotoRules();
     }
@@ -286,8 +315,23 @@ class extends Component {
             && $this->photoRules['dimensions'] === true;
     }
 
+    private function blockIfLocked(): bool
+    {
+        if (! $this->isLocked) {
+            return false;
+        }
+
+        Toast::error(__('Your profile is locked because you have already submitted your application.'));
+
+        return true;
+    }
+
     public function saveProfile()
     {
+        if ($this->blockIfLocked()) {
+            return;
+        }
+
         $this->profile['nationality'] = 'Bangladeshi';
 
         foreach (['full_name', 'father_name', 'mother_name'] as $field) {
@@ -429,6 +473,10 @@ class extends Component {
 
     public function saveAddresses(): void
     {
+        if ($this->blockIfLocked()) {
+            return;
+        }
+
         if ($this->sameAsPresent) {
             $this->mirrorPermanentFromPresent();
         }
@@ -468,6 +516,10 @@ class extends Component {
 
     public function saveEducations(): void
     {
+        if ($this->blockIfLocked()) {
+            return;
+        }
+
         $degrees = collect(config('degree.degrees'))->keyBy('type');
         $optionalTypes = ['Graduate', 'Other'];
         $valueFields = ['name', 'major', 'institute', 'result', 'scale', 'duration', 'passing_year'];
@@ -547,6 +599,10 @@ class extends Component {
 
     public function saveExperiences(): void
     {
+        if ($this->blockIfLocked()) {
+            return;
+        }
+
         $this->validate([
             'experiences' => ['required', 'array', 'min:1'],
             'experiences.*.organization' => ['required', 'string', 'max:255'],
@@ -703,6 +759,33 @@ class extends Component {
         <h1 class="font-inter font-bold text-2xl sm:text-3xl text-gray-900">My Profile</h1>
         <p class="text-gray-500 text-sm mt-2">Manage your personal information, contact addresses, and academic and work history.</p>
     </div>
+
+    {{-- ===================== LOCKED BANNER ===================== --}}
+    @if ($isLocked)
+        <div class="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="shrink-0 w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
+                    <x-lucide-lock class="size-4" />
+                </div>
+                <div>
+                    <h3 class="font-inter font-bold text-sm text-amber-900">Profile locked</h3>
+                    <p class="text-sm text-amber-800 mt-0.5">
+                        Your application
+                        @if ($lockedApplicationNumber)
+                            <span class="font-mono font-bold">{{ $lockedApplicationNumber }}</span>
+                        @endif
+                        has been submitted. Personal details, addresses, education, and experience can no longer be edited.
+                    </p>
+                </div>
+            </div>
+            <a href="{{ route('applicant.application') }}"
+                class="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-white text-sm transition-opacity hover:opacity-90"
+                style="background:#8b072b;"
+            >
+                View Application <x-lucide-arrow-right class="size-4" />
+            </a>
+        </div>
+    @endif
 
     {{-- ===================== TAB BAR ===================== --}}
     <div class="bg-white rounded-3xl shadow-[0_4px_24px_-8px_rgba(15,10,40,0.08)] border border-gray-100 overflow-hidden">
@@ -951,14 +1034,19 @@ class extends Component {
                     </div>
 
                     <button type="submit"
-                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60"
+                        @disabled($isLocked)
+                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
                         style="background:#8b072b;"
                         wire:loading.attr="disabled"
                         wire:target="saveProfile"
                     >
-                        <span wire:loading.remove wire:target="saveProfile">Save profile</span>
-                        <span wire:loading wire:target="saveProfile">Saving...</span>
-                        <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveProfile" />
+                        @if ($isLocked)
+                            <x-lucide-lock class="size-4" /> Profile locked
+                        @else
+                            <span wire:loading.remove wire:target="saveProfile">Save profile</span>
+                            <span wire:loading wire:target="saveProfile">Saving...</span>
+                            <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveProfile" />
+                        @endif
                     </button>
                 </div>
             </form>
@@ -1070,14 +1158,19 @@ class extends Component {
                     </div>
 
                     <button type="submit"
-                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60"
+                        @disabled($isLocked)
+                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
                         style="background:#8b072b;"
                         wire:loading.attr="disabled"
                         wire:target="saveAddresses"
                     >
-                        <span wire:loading.remove wire:target="saveAddresses">Save addresses</span>
-                        <span wire:loading wire:target="saveAddresses">Saving...</span>
-                        <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveAddresses" />
+                        @if ($isLocked)
+                            <x-lucide-lock class="size-4" /> Profile locked
+                        @else
+                            <span wire:loading.remove wire:target="saveAddresses">Save addresses</span>
+                            <span wire:loading wire:target="saveAddresses">Saving...</span>
+                            <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveAddresses" />
+                        @endif
                     </button>
                 </div>
             </form>
@@ -1341,14 +1434,19 @@ class extends Component {
                     </div>
 
                     <button type="submit"
-                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60"
+                        @disabled($isLocked)
+                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
                         style="background:#8b072b;"
                         wire:loading.attr="disabled"
                         wire:target="saveEducations"
                     >
-                        <span wire:loading.remove wire:target="saveEducations">Save education</span>
-                        <span wire:loading wire:target="saveEducations">Saving...</span>
-                        <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveEducations" />
+                        @if ($isLocked)
+                            <x-lucide-lock class="size-4" /> Profile locked
+                        @else
+                            <span wire:loading.remove wire:target="saveEducations">Save education</span>
+                            <span wire:loading wire:target="saveEducations">Saving...</span>
+                            <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveEducations" />
+                        @endif
                     </button>
                 </div>
             </form>
@@ -1446,14 +1544,19 @@ class extends Component {
                     </div>
 
                     <button type="submit"
-                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60"
+                        @disabled($isLocked)
+                        class="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-white text-sm shadow-md shadow-rose-900/10 transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
                         style="background:#8b072b;"
                         wire:loading.attr="disabled"
                         wire:target="saveExperiences"
                     >
-                        <span wire:loading.remove wire:target="saveExperiences">Save experience</span>
-                        <span wire:loading wire:target="saveExperiences">Saving...</span>
-                        <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveExperiences" />
+                        @if ($isLocked)
+                            <x-lucide-lock class="size-4" /> Profile locked
+                        @else
+                            <span wire:loading.remove wire:target="saveExperiences">Save experience</span>
+                            <span wire:loading wire:target="saveExperiences">Saving...</span>
+                            <x-lucide-arrow-right class="size-4" wire:loading.remove wire:target="saveExperiences" />
+                        @endif
                     </button>
                 </div>
             </form>
