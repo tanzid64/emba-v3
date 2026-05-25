@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\BkashService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(BkashService::class, fn () => new BkashService(
+            baseUrl: config('bkash.base_url'),
+            appKey: config('bkash.app_key'),
+            appSecret: config('bkash.app_secret'),
+            username: config('bkash.username'),
+            password: config('bkash.password'),
+            sandboxMode: config('bkash.sandbox'),
+        ));
     }
 
     /**

@@ -70,4 +70,9 @@ class Applicant extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Application::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
 }

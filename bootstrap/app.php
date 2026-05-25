@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust Cloudflare's IP ranges + the tunnel so X-Forwarded-Host /
+        // X-Forwarded-Proto from cloudflared and Cloudflare are honoured.
+        $middleware->trustProxies(at: '*');
+
         $middleware->redirectGuestsTo(fn ($request) => $request->is('applicant*')
             ? route('applicant.login')
             : route('login')

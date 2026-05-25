@@ -5,6 +5,7 @@ use App\Http\Controllers\Applicant\Auth\ForgotPasswordController;
 use App\Http\Controllers\Applicant\Auth\LoginController;
 use App\Http\Controllers\Applicant\Auth\RegisterController;
 use App\Http\Controllers\Applicant\Auth\ResetPasswordController;
+use App\Http\Controllers\Payment\BkashController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('applicant')->name('applicant.')->group(function () {
@@ -37,6 +38,12 @@ Route::prefix('applicant')->name('applicant.')->group(function () {
             Route::livewire('dashboard', 'pages::applicant.dashboard')->name('dashboard');
             Route::livewire('profile', 'pages::applicant.profile')->name('profile');
             Route::livewire('application', 'pages::applicant.application')->name('application');
+            Route::livewire('payments', 'pages::applicant.payments')->name('payments');
+
+            Route::prefix('payment/bkash')->name('payment.bkash.')->group(function () {
+                Route::post('initiate', [BkashController::class, 'initiate'])->name('initiate');
+                Route::get('callback', [BkashController::class, 'callback'])->name('callback');
+            });
         });
     });
 });
