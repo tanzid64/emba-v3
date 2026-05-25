@@ -36,6 +36,7 @@ Route::prefix('applicant')->name('applicant.')->group(function () {
         Route::middleware('verified:applicant.verification.notice')->group(function () {
             Route::livewire('dashboard', 'pages::applicant.dashboard')->name('dashboard');
             Route::livewire('profile', 'pages::applicant.profile')->name('profile');
+            Route::livewire('application', 'pages::applicant.application')->name('application');
         });
     });
 });

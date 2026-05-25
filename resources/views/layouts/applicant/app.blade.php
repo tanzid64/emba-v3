@@ -119,6 +119,16 @@
                 <x-lucide-user-circle class="size-4 shrink-0" />
                 Profile
             </a>
+
+            <a href="{{ route('applicant.application') }}"
+                @click="sidebarOpen = false"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors
+                    {{ request()->routeIs('applicant.application') ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}"
+                style="{{ request()->routeIs('applicant.application') ? 'background:#2F1B72;' : '' }}"
+            >
+                <x-lucide-clipboard-list class="size-4 shrink-0" />
+                Application
+            </a>
         </nav>
 
         {{-- Bottom: logout --}}
