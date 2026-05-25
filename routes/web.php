@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::livewire('batches', 'pages::admin.batches')->name('batches.index');
         Route::livewire('batches/create', 'pages::admin.batches.create')->name('batches.create');
+        Route::livewire('applicants', 'pages::admin.applicants')->name('applicants.index');
         Route::livewire('docs', 'pages::admin.docs')->name('docs');
 
         Route::post('current-batch', function (Request $request) {

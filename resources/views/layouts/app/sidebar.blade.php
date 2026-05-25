@@ -105,6 +105,9 @@
                     <flux:sidebar.item icon="rectangle-stack" :href="route('admin.batches.index')" :current="request()->routeIs('admin.batches.*')" wire:navigate>
                         {{ __('Admission Batch') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="users" :href="route('admin.applicants.index')" :current="request()->routeIs('admin.applicants.*')" wire:navigate>
+                        {{ __('All Applicants') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Help')" class="grid">
