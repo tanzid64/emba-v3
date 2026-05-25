@@ -34,6 +34,41 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 
+## Project-Specific Rules (ALWAYS APPLY)
+
+### Models & database fields
+
+Before referencing a database field in queries, blade templates, or PHP code:
+
+1. **Open the relevant model and read its `$casts`, `$guarded`, `$appends`, and accessor methods.** Do not assume a column returns a primitive — this project uses custom casts.
+2. **Datetime fields use `App\Casts\DateFormatCast`**, which returns an array `['original' => ..., 'humanize' => ..., 'formatted' => ...]`. Never echo a casted timestamp directly with `{{ $model->created_at }}` — it will crash with `htmlspecialchars(): Argument #1 must be of type string, array given`. Use `$model->created_at['formatted']` / `['humanize']`, or parse `['original']` with Carbon if you need a custom format.
+3. **Check for accessor methods (`getXAttribute`) and `$appends`** before computing values yourself — e.g., `ApplicantProfile` exposes `photo_url` and `photo_path`; `Application` exposes `is_applied`.
+4. **Check enum casts** before treating a field as a string. Many columns (`status`, `payment_status`, `gender`, `blood_group`, `religion`, `marital_status`) cast to backed enums and expose a `->label()` method.
+5. **Use `database-schema` (Laravel Boost MCP tool) to confirm column existence and types** before writing migrations, queries, or factories.
+
+### UI components
+
+Before writing any markup for a UI element:
+
+1. **Check `resources/views/components/ui/` first** — the project already has `x-ui.table`, `x-ui.button`, `x-ui.input`, `x-ui.badge`, `x-ui.modal`, `x-ui.toast`, `x-ui.async-select`, and `resources/views/ui/pagination.blade.php`. Reuse them; don't hand-roll a `<table>`, `<button>`, or `<input>`.
+2. **Check Flux components next** (`<flux:sidebar>`, `<flux:dropdown>`, `<flux:menu>`, `<flux:profile>`, etc.) — the project uses livewire/flux v2.
+3. **Check `resources/views/components/`** for higher-level building blocks (`x-app-logo`, `x-desktop-user-menu`, `x-auth-header`).
+4. **Mirror sibling pages for layout patterns** — `resources/views/pages/admin/⚡batches.blade.php`, `⚡applicants.blade.php`, `⚡quick-settings.blade.php` show the page header → toolbar → table card pattern in use. Match it instead of inventing a new one.
+5. **If an existing component is close but not quite right, extend it** (e.g., adding a named slot) rather than duplicating it inline.
+
+### Icons
+
+1. **Always use Lucide icons** via the `mallardduck/blade-lucide-icons` package. The `lucide` prefix is configured project-wide.
+   - Anonymous component form: `<x-lucide-search class="size-4" />`, `<x-lucide-arrow-right />`.
+   - SVG helper inside PHP: `@svg('lucide-search', 'size-4')`.
+   - Dynamic name: `<x-dynamic-component :component="'lucide-' . $iconName" />`.
+2. **When passing an icon to a component that has an `icon` prop, use the prop — do not nest the icon manually.**
+   - Correct: `<x-ui.button icon="plus">Add</x-ui.button>`, `<x-ui.input icon="search" ... />`, `<flux:sidebar.item icon="users" ...>`.
+   - Wrong: `<x-ui.button><x-lucide-plus class="size-4" />Add</x-ui.button>` — the `icon` prop already handles sizing, spacing, and color inheritance for its size variant.
+3. **Confirm the icon name exists in `vendor/mallardduck/blade-lucide-icons/resources/svg/`** before using it. Lucide uses kebab-case (`graduation-cap`, `arrow-left-from-line`, `chevrons-up-down`). Do not invent names — if unsure, `ls` that folder or check [lucide.dev](https://lucide.dev/icons).
+4. **For an icon-only badge** (the colored square in section headers), wrap the icon in a span with explicit `bg-*` and `text-white`: `<span class="inline-flex items-center justify-center size-9 rounded-lg bg-brand text-white shrink-0"><x-lucide-wallet class="size-4" /></span>`. Lucide icons render with `stroke="currentColor"`, so the parent's text color drives the stroke.
+5. **Never put bare icon `<span>` blocks outside a card** when the page body is `bg-zinc-100` and the badge is `bg-zinc-700` — contrast is fine, but if you want consistency with sibling sections that *are* in cards, either wrap the header in a `{{ $card }}` div or move it into the `x-ui.table` `toolbar` slot.
+
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
@@ -165,10 +200,14 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 === pest/core rules ===
 
 ## Pest
-
+- Do not write test cases without approval.
 - This project uses Pest for testing. Create tests: `php artisan make:test --pest {name}`.
 - The `{name}` argument should not include the test suite directory. Use `php artisan make:test --pest SomeFeatureTest` instead of `php artisan make:test --pest Feature/SomeFeatureTest`.
 - Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
 - Do NOT delete tests without approval.
+
+## Database Field
+- While you using a datetime field always check Model if that casted as DateFormatCast
+- Always check for model method or attributes
 
 </laravel-boost-guidelines>
