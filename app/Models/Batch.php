@@ -7,6 +7,7 @@ use App\Enum\BatchStatusEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Batch extends Model
 {
@@ -37,5 +38,10 @@ class Batch extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    public function admissionSetting(): HasOne
+    {
+        return $this->hasOne(AdmissionSetting::class);
     }
 }
