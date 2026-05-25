@@ -120,18 +120,22 @@
                 <h3 style="font-size:10px; font-weight:normal;">University of Dhaka</h3>
                 <h3 style="font-size:10px; margin-top:4px;"><i>Application Form (Applicant's Copy)</i></h3>
             </td>
-            <td width="20%"></td>
+            <td width="20%" style="vertical-align:middle; text-align:center;">
+                @if (! empty($data->verify_url))
+                    <barcode code="{{ $data->verify_url }}" type="QR" class="barcode" size="1.0" error="L" />
+                    <p style="font-size:8px; color:#666; margin-top:2px;">Scan to verify</p>
+                @endif
+            </td>
         </tr>
     </table>
 
     <hr>
 
-    {{-- ═══════════════ PHOTO · INFO · APP-ID ROW ═══════════════ --}}
+    {{-- ═══════════════ PHOTO · APP-ID ROW ═══════════════ --}}
     <table style="margin-bottom:6px;">
         <tr>
             {{-- Photo --}}
             <td width="18%" style="vertical-align:top; padding-right:8px;">
-
                 <img src="{{ $data->photo_path }}"
                     style="width:100px; height:100px; border:1px solid #000; object-fit:cover;" alt="Photo">
             </td>

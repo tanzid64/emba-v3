@@ -11,6 +11,7 @@ use App\Models\Upazila;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf as PDF;
 
 class PDFController extends Controller
@@ -59,10 +60,15 @@ class PDFController extends Controller
 
         $receiptNo = $payment->payment_number;
         $purpose = $payment->actor_table; // PaymentActorEnum — exposes ->label()
+        // Permanent signed URL printed as a QR on the receipt — scanning
+        // takes anyone to the public verification page.
+        $verifyUrl = URL::signedRoute('verify.payment', [
+            'paymentNo' => $payment->payment_number,
+        ]);
 
         $filename = "EMBA_PAYMENT_RECEIPT_{$payment->payment_number}.pdf";
 
-        $pdf = PDF::loadView('pdfs.payment-receipt', compact('payment', 'receiptNo', 'purpose'), [], [
+        $pdf = PDF::loadView('pdfs.payment-receipt', compact('payment', 'receiptNo', 'purpose', 'verifyUrl'), [], [
             'title' => "EMBA_Payment_Receipt_{$payment->payment_number}",
         ]);
 
@@ -125,6 +131,13 @@ class PDFController extends Controller
             'trx_id' => $application->trx_id,
             'pay_type' => $application->payment_method,
             'paid_at' => $application->paid_at,
+
+            // Permanent signed URL to the public verification page — printed
+            // as a QR code on the form so anyone scanning a paper copy
+            // lands on the "Authentic" verification view.
+            'verify_url' => URL::signedRoute('verify.application', [
+                'appNo' => $application->application_number,
+            ]),
         ];
 
         $districtIds = $addresses->pluck('district_id')->filter()->unique();

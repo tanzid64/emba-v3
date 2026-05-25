@@ -221,6 +221,18 @@
     </tr>
 </table>
 
+{{-- QR verification --}}
+@if (! empty($verifyUrl))
+    <table style="margin-top:14px;">
+        <tr>
+            <td style="text-align:center;">
+                <barcode code="{{ $verifyUrl }}" type="QR" size="1.0" error="L" />
+                <p style="font-size:8px; color:#666; margin-top:2px;">Scan to verify receipt</p>
+            </td>
+        </tr>
+    </table>
+@endif
+
 {{-- Footer --}}
 <div class="footer">
     <p>This is a computer-generated receipt and does not require a signature.</p>

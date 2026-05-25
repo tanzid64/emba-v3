@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PDFController;
+use App\Http\Controllers\VerificationController;
 use App\Support\CurrentBatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,17 @@ Route::group([
         ->name('application-form');
     Route::get('payment-receipt/{paymentNo}', [PDFController::class, 'generatePaymentReceiptPDF'])
         ->name('payment-receipt');
+});
+
+// Public, signed verification pages reached via the QR codes on the
+// printed application form / payment receipt. `signed` middleware
+// rejects any URL whose signature doesn't match — typing the URL by
+// hand returns 403.
+Route::middleware('signed')->name('verify.')->group(function () {
+    Route::get('verify/application/{appNo}', [VerificationController::class, 'application'])
+        ->name('application');
+    Route::get('verify/payment/{paymentNo}', [VerificationController::class, 'payment'])
+        ->name('payment');
 });
 
 require __DIR__.'/settings.php';
