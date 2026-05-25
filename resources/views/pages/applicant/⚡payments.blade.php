@@ -105,6 +105,7 @@ class extends Component {
             <th class="text-right font-semibold text-zinc-700 px-4 py-3">{{ __('Amount') }}</th>
             <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Status') }}</th>
             <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Paid At') }}</th>
+            <th class="text-right font-semibold text-zinc-700 px-4 py-3 w-24">{{ __('Action') }}</th>
         </x-slot:columns>
 
         @forelse ($payments as $payment)
@@ -141,10 +142,40 @@ class extends Component {
                 <td class="px-4 py-3 text-sm text-zinc-700 whitespace-nowrap">
                     {{ $payment->paid_at['formatted'] ?? '—' }}
                 </td>
+
+                <td class="px-4 py-3">
+                    <div class="flex items-center justify-end gap-1.5">
+                        @if ($payment->status === PaymentStatusEnum::COMPLETED)
+                            <x-ui.tooltip text="{{ __('View receipt') }}">
+                                <a
+                                    href="{{ route('pdf.payment-receipt', $payment->payment_number) }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    aria-label="{{ __('View receipt') }}"
+                                    class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors"
+                                >
+                                    <x-lucide-eye class="size-4" />
+                                </a>
+                            </x-ui.tooltip>
+
+                            <x-ui.tooltip text="{{ __('Download receipt') }}">
+                                <a
+                                    href="{{ route('pdf.payment-receipt', ['paymentNo' => $payment->payment_number, 'action' => 'download']) }}"
+                                    aria-label="{{ __('Download receipt') }}"
+                                    class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors"
+                                >
+                                    <x-lucide-download class="size-4" />
+                                </a>
+                            </x-ui.tooltip>
+                        @else
+                            <span class="text-xs text-zinc-400">—</span>
+                        @endif
+                    </div>
+                </td>
             </tr>
         @empty
             <tr>
-                <td colspan="8" class="px-4 py-10 text-center text-zinc-500">
+                <td colspan="9" class="px-4 py-10 text-center text-zinc-500">
                     @if ($status !== '')
                         {{ __('No payments match the current filter.') }}
                     @else

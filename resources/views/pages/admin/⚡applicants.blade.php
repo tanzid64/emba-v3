@@ -10,9 +10,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('All Applicants')]
-#[Layout('layouts.app')]
-class extends Component {
+new #[Title('All Applicants')] #[Layout('layouts.app')] class extends Component {
     use WithPagination;
 
     #[Url(as: 'q', except: '')]
@@ -71,7 +69,7 @@ class extends Component {
 
     public function with(): array
     {
-        if (! $this->batch) {
+        if (!$this->batch) {
             return ['applications' => null];
         }
 
@@ -79,21 +77,17 @@ class extends Component {
 
         $applications = Application::query()
             ->where('batch_id', $this->batch->id)
-            ->with([
-                'applicant:id,email,phone_number',
-                'applicant.profile:id,applicant_id,full_name,father_name,mother_name,photo',
-            ])
-            ->when($this->paymentStatus !== '', fn ($q) => $q->where('payment_status', $this->paymentStatus))
+            ->with(['applicant:id,email,phone_number', 'applicant.profile:id,applicant_id,full_name,father_name,mother_name,photo'])
+            ->when($this->paymentStatus !== '', fn($q) => $q->where('payment_status', $this->paymentStatus))
             ->when($term !== '', function ($query) use ($term) {
-                $like = '%'.$term.'%';
+                $like = '%' . $term . '%';
 
                 $query->where(function ($q) use ($like) {
                     $q->where('application_number', 'like', $like)
                         ->orWhereHas('applicant', function ($a) use ($like) {
-                            $a->where('email', 'like', $like)
-                                ->orWhere('phone_number', 'like', $like);
+                            $a->where('email', 'like', $like)->orWhere('phone_number', 'like', $like);
                         })
-                        ->orWhereHas('applicant.profile', fn ($p) => $p->where('full_name', 'like', $like));
+                        ->orWhereHas('applicant.profile', fn($p) => $p->where('full_name', 'like', $like));
                 });
             })
             ->latest('id')
@@ -129,44 +123,38 @@ class extends Component {
         @endif
     </div>
 
-    @if (! $batch)
+    @if (!$batch)
         <div class="rounded-xl border border-dashed border-zinc-200 bg-white px-6 py-16 text-center">
-            <p class="text-sm text-zinc-500">{{ __('No batch selected. Pick one from the sidebar to load its applications.') }}</p>
+            <p class="text-sm text-zinc-500">
+                {{ __('No batch selected. Pick one from the sidebar to load its applications.') }}</p>
         </div>
     @else
         <x-ui.table :paginate="$applications">
             <x-slot:toolbar>
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="flex-1 min-w-[260px] max-w-md">
-                        <x-ui.input
-                            icon="search"
-                            clearable
-                            type="search"
+                        <x-ui.input icon="search" clearable type="search"
                             placeholder="{{ __('Search by name, app. ID, mobile, email…') }}"
-                            wire:model.live.debounce.400ms="search"
-                        />
+                            wire:model.live.debounce.400ms="search" />
                     </div>
 
-                    <select
-                        wire:model.live="paymentStatus"
-                        class="h-9 rounded-lg border border-zinc-200 bg-white px-3 pe-8 text-sm text-zinc-700 shadow-xs focus:outline-none focus:border-zinc-400"
-                    >
+                    <select wire:model.live="paymentStatus"
+                        class="h-9 rounded-lg border border-zinc-200 bg-white px-3 pe-8 text-sm text-zinc-700 shadow-xs focus:outline-none focus:border-zinc-400">
                         <option value="">{{ __('All payments') }}</option>
                         @foreach ($this->paymentStatuses() as $status)
                             <option value="{{ $status->value }}">{{ $status->label() }}</option>
                         @endforeach
                     </select>
 
-                    <select
-                        wire:model.live="perPage"
-                        class="h-9 rounded-lg border border-zinc-200 bg-white px-3 pe-8 text-sm text-zinc-700 shadow-xs focus:outline-none focus:border-zinc-400"
-                    >
+                    <select wire:model.live="perPage"
+                        class="h-9 rounded-lg border border-zinc-200 bg-white px-3 pe-8 text-sm text-zinc-700 shadow-xs focus:outline-none focus:border-zinc-400">
                         @foreach ([10, 20, 50, 100] as $size)
                             <option value="{{ $size }}">{{ $size }} / {{ __('page') }}</option>
                         @endforeach
                     </select>
 
-                    <div class="flex items-center gap-2 text-xs text-zinc-400" wire:loading wire:target="search,paymentStatus,perPage">
+                    <div class="flex items-center gap-2 text-xs text-zinc-400" wire:loading
+                        wire:target="search,paymentStatus,perPage">
                         <x-lucide-loader-2 class="size-3.5 animate-spin" />
                         {{ __('Loading…') }}
                     </div>
@@ -194,14 +182,12 @@ class extends Component {
                     <td class="px-4 py-3 text-zinc-500 tabular-nums">{{ $sl }}</td>
 
                     <td class="px-4 py-3">
-                        <img
-                            src="{{ $profile?->photo_url ?? asset('assets/images/default-avatar.png') }}"
-                            alt=""
-                            class="size-10 rounded-md object-cover bg-zinc-100"
-                        />
+                        <img src="{{ $profile?->photo_url ?? asset('assets/images/default-avatar.png') }}"
+                            alt="" class="size-10 rounded-md object-cover bg-zinc-100" />
                     </td>
 
-                    <td class="px-4 py-3 font-mono text-zinc-800 whitespace-nowrap">{{ $application->application_number }}</td>
+                    <td class="px-4 py-3 font-mono text-zinc-800 whitespace-nowrap">
+                        {{ $application->application_number }}</td>
 
                     <td class="px-4 py-3 font-semibold text-zinc-900 uppercase">
                         {{ $profile?->full_name ?? __('—') }}
@@ -209,8 +195,10 @@ class extends Component {
 
                     <td class="px-4 py-3 text-sm text-zinc-700">
                         @if ($profile)
-                            <p><span class="font-semibold text-zinc-600">{{ __("Father's Name") }}:</span> {{ $profile->father_name }}</p>
-                            <p><span class="font-semibold text-zinc-600">{{ __("Mother's Name") }}:</span> {{ $profile->mother_name }}</p>
+                            <p><span class="font-semibold text-zinc-600">{{ __("Father's Name") }}:</span>
+                                {{ $profile->father_name }}</p>
+                            <p><span class="font-semibold text-zinc-600">{{ __("Mother's Name") }}:</span>
+                                {{ $profile->mother_name }}</p>
                         @else
                             <span class="text-zinc-400 italic">{{ __('Profile not completed') }}</span>
                         @endif
@@ -236,26 +224,55 @@ class extends Component {
                             </x-ui.badge>
 
                             @if ($application->trx_id)
-                                <p class="text-xs text-zinc-600"><span class="font-semibold">{{ __('Trx ID') }}:</span> {{ $application->trx_id }}</p>
+                                <p class="text-xs text-zinc-600"><span
+                                        class="font-semibold">{{ __('Trx ID') }}:</span> {{ $application->trx_id }}
+                                </p>
                             @endif
 
                             @if ($application->paid_at)
-                                <p class="text-xs text-zinc-500"><span class="font-semibold">{{ __('Time') }}:</span> {{ $application->paid_at['formatted'] ?? '—' }}</p>
+                                <p class="text-xs text-zinc-500"><span
+                                        class="font-semibold">{{ __('Time') }}:</span>
+                                    {{ $application->paid_at['formatted'] ?? '—' }}</p>
                             @endif
                         </div>
                     </td>
 
                     <td class="px-4 py-3">
-                        <div class="flex flex-col gap-1.5 items-end">
-                            <x-ui.button size="sm" variant="outline" icon="eye" :href="route('admin.applicants.show', $application)" wire:navigate>
-                                {{ __('View') }}
-                            </x-ui.button>
-                            <x-ui.button size="sm" variant="outline" icon="pencil" :href="route('admin.applicants.edit', $application)" wire:navigate>
-                                {{ __('Edit') }}
-                            </x-ui.button>
-                            <x-ui.button size="sm" variant="outline" icon="download">
-                                {{ __('Download') }}
-                            </x-ui.button>
+                        <div class="flex items-center justify-end gap-1.5">
+                            <x-ui.tooltip text="{{ __('View applicant') }}">
+                                <a href="{{ route('admin.applicants.show', $application) }}" wire:navigate
+                                    aria-label="{{ __('View applicant') }}"
+                                    class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors">
+                                    <x-lucide-eye class="size-4" />
+                                </a>
+                            </x-ui.tooltip>
+
+                            <x-ui.tooltip text="{{ __('Edit applicant') }}">
+                                <a href="{{ route('admin.applicants.edit', $application) }}" wire:navigate
+                                    aria-label="{{ __('Edit applicant') }}"
+                                    class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors">
+                                    <x-lucide-pencil class="size-4" />
+                                </a>
+                            </x-ui.tooltip>
+
+                            @if ($application->is_applied)
+                                <x-ui.tooltip text="{{ __('View application form') }}">
+                                    <a href="{{ route('pdf.application-form', $application->application_number) }}"
+                                        target="_blank" rel="noopener"
+                                        aria-label="{{ __('View application form') }}"
+                                        class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors">
+                                        <x-lucide-file-text class="size-4" />
+                                    </a>
+                                </x-ui.tooltip>
+
+                                <x-ui.tooltip text="{{ __('Download application form') }}">
+                                    <a href="{{ route('pdf.application-form', ['appNo' => $application->application_number, 'action' => 'download']) }}"
+                                        aria-label="{{ __('Download application form') }}"
+                                        class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors">
+                                        <x-lucide-download class="size-4" />
+                                    </a>
+                                </x-ui.tooltip>
+                            @endif
                         </div>
                     </td>
                 </tr>
