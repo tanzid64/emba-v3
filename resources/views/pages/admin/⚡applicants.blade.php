@@ -240,7 +240,7 @@ class extends Component {
                             @endif
 
                             @if ($application->paid_at)
-                                <p class="text-xs text-zinc-500"><span class="font-semibold">{{ __('Time') }}:</span> {{ \Carbon\Carbon::parse($application->paid_at)->format('d M, Y - h:i A') }}</p>
+                                <p class="text-xs text-zinc-500"><span class="font-semibold">{{ __('Time') }}:</span> {{ $application->paid_at['formatted'] ?? '—' }}</p>
                             @endif
                         </div>
                     </td>

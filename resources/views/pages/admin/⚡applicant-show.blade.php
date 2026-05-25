@@ -88,10 +88,20 @@ class extends Component {
             <x-ui.button variant="ghost" icon="arrow-left" :href="route('admin.applicants.index')" wire:navigate>
                 {{ __('Back') }}
             </x-ui.button>
-            <x-ui.button variant="outline" icon="file-text">
+            <x-ui.button
+                variant="outline"
+                icon="file-text"
+                :href="route('pdf.application-form', $application)"
+                target="_blank"
+                rel="noopener"
+            >
                 {{ __('View Application Form') }}
             </x-ui.button>
-            <x-ui.button variant="primary" icon="download">
+            <x-ui.button
+                variant="primary"
+                icon="download"
+                :href="route('pdf.application-form', ['application' => $application, 'action' => 'download'])"
+            >
                 {{ __('Download PDF') }}
             </x-ui.button>
         </div>
@@ -167,7 +177,7 @@ class extends Component {
             <div>
                 <span class="{{ $labelClasses }}">{{ __('Paid At') }}</span>
                 @if ($application->paid_at)
-                    <p class="{{ $valueClasses }}">{{ \Carbon\Carbon::parse($application->paid_at)->format('d M Y - h:i A') }}</p>
+                    <p class="{{ $valueClasses }}">{{ $application->paid_at['formatted'] ?? '—' }}</p>
                 @else
                     <p class="{{ $valueMuted }}">—</p>
                 @endif

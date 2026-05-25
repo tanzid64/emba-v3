@@ -23,6 +23,7 @@ class Application extends Model
         'payment_status' => PaymentStatusEnum::class,
         'payment_method' => PaymentMethodEnum::class,
         'applied_at' => DateFormatCast::class,
+        'paid_at' => DateFormatCast::class,
     ];
 
     protected $appends = ['is_applied'];

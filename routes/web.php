@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PDFController;
 use App\Support\CurrentBatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return redirect($request->input('_return_to') ?: url()->previous());
         })->name('current-batch.set');
     });
+});
+
+Route::group([
+    'prefix' => 'pdf',
+    'as' => 'pdf.',
+    'middleware' => 'auth:applicant,web',
+], function () {
+    Route::get('application-form/{application}', [PDFController::class, 'generateApplicationFormPDF'])
+        ->name('application-form');
 });
 
 require __DIR__.'/settings.php';

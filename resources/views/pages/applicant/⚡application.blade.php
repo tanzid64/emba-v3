@@ -170,6 +170,23 @@ class extends Component {
                         Submitted {{ $application->applied_at['formatted'] ?? '' }}
                     </p>
                 @endif
+
+                @if ($isApplied)
+                    <div class="mt-3 flex items-center gap-2 flex-wrap justify-end">
+                        <a href="{{ route('pdf.application-form', $application) }}"
+                            target="_blank" rel="noopener"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-900 transition-colors"
+                        >
+                            <x-lucide-eye class="size-3.5" /> View Form
+                        </a>
+                        <a href="{{ route('pdf.application-form', ['application' => $application, 'action' => 'download']) }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-90"
+                            style="background:#8b072b;"
+                        >
+                            <x-lucide-download class="size-3.5" /> Download
+                        </a>
+                    </div>
+                @endif
             </div>
         @endif
     </div>
