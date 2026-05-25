@@ -250,6 +250,9 @@ class extends Component {
                             <x-ui.button size="sm" variant="outline" icon="eye" :href="route('admin.applicants.show', $application)" wire:navigate>
                                 {{ __('View') }}
                             </x-ui.button>
+                            <x-ui.button size="sm" variant="outline" icon="pencil" :href="route('admin.applicants.edit', $application)" wire:navigate>
+                                {{ __('Edit') }}
+                            </x-ui.button>
                             <x-ui.button size="sm" variant="outline" icon="download">
                                 {{ __('Download') }}
                             </x-ui.button>
