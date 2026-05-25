@@ -32,7 +32,7 @@ beforeEach(function () {
 it('guests cannot access the application form PDF', function () {
     // Path is neither under /applicant nor under /admin, so the global
     // redirectGuestsTo rule sends them to the admin login by default.
-    $this->get(route('pdf.application-form', $this->application))
+    $this->get(route('pdf.application-form', $this->application->application_number))
         ->assertRedirect(route('login'));
 });
 
@@ -40,19 +40,19 @@ it('admin users can access any applicant pdf', function () {
     $admin = User::factory()->create();
 
     $this->actingAs($admin, 'web')
-        ->get(route('pdf.application-form', $this->application))
+        ->get(route('pdf.application-form', $this->application->application_number))
         ->assertOk();
 });
 
 it('an applicant can access their own pdf', function () {
     $this->actingAs($this->owner, 'applicant')
-        ->get(route('pdf.application-form', $this->application))
+        ->get(route('pdf.application-form', $this->application->application_number))
         ->assertOk();
 });
 
 it('an applicant cannot access another applicant pdf', function () {
     $this->actingAs($this->stranger, 'applicant')
-        ->get(route('pdf.application-form', $this->application))
+        ->get(route('pdf.application-form', $this->application->application_number))
         ->assertForbidden();
 });
 

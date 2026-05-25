@@ -35,8 +35,10 @@ Route::group([
     'as' => 'pdf.',
     'middleware' => 'auth:applicant,web',
 ], function () {
-    Route::get('application-form/{application}', [PDFController::class, 'generateApplicationFormPDF'])
+    Route::get('application-form/{appNo}', [PDFController::class, 'generateApplicationFormPDF'])
         ->name('application-form');
+    Route::get('payment-receipt/{paymentNo}', [PDFController::class, 'generatePaymentReceiptPDF'])
+        ->name('payment-receipt');
 });
 
 require __DIR__.'/settings.php';

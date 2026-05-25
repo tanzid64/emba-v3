@@ -6,6 +6,7 @@ use App\Enums\PaymentStatusEnum;
 use App\Models\Applicant;
 use App\Models\Application;
 use App\Models\District;
+use App\Models\Payment;
 use App\Models\Upazila;
 use App\Models\User;
 use Carbon\Carbon;
@@ -18,8 +19,9 @@ class PDFController extends Controller
      * Stream (or download) the applicant's application form as a PDF.
      * Visible to the applicant who owns the record and to any admin user.
      */
-    public function generateApplicationFormPDF(Application $application, Request $request)
+    public function generateApplicationFormPDF(string $appNo, Request $request)
     {
+        $application = Application::where('application_number', $appNo)->firstOrFail();
         $this->ensureCanAccess($request, $application->applicant_id);
 
         $application->load([
@@ -35,7 +37,33 @@ class PDFController extends Controller
         $filename = "EMBA_APPLICATION_FORM_{$application->application_number}.pdf";
 
         $pdf = PDF::loadView('pdfs.application-form', compact('data', 'districts', 'upazilas'), [], [
-            'title' => "EMBA Application Form {$application->application_number}",
+            'title' => "EMBA_Application_Form_{$application->application_number}",
+        ]);
+
+        return $request->input('action') === 'download'
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
+    }
+
+    /**
+     * Stream (or download) a bKash payment receipt as a PDF.
+     * Visible to the applicant who owns the payment and to any admin user.
+     */
+    public function generatePaymentReceiptPDF(string $paymentNo, Request $request)
+    {
+        $payment = Payment::where('payment_number', $paymentNo)
+            ->with(['applicant.profile', 'applicant.batch'])
+            ->firstOrFail();
+
+        $this->ensureCanAccess($request, $payment->applicant_id);
+
+        $receiptNo = $payment->payment_number;
+        $purpose = $payment->actor_table; // PaymentActorEnum — exposes ->label()
+
+        $filename = "EMBA_PAYMENT_RECEIPT_{$payment->payment_number}.pdf";
+
+        $pdf = PDF::loadView('pdfs.payment-receipt', compact('payment', 'receiptNo', 'purpose'), [], [
+            'title' => "EMBA_Payment_Receipt_{$payment->payment_number}",
         ]);
 
         return $request->input('action') === 'download'

@@ -91,7 +91,7 @@ class extends Component {
             <x-ui.button
                 variant="outline"
                 icon="file-text"
-                :href="route('pdf.application-form', $application)"
+                :href="route('pdf.application-form', $application->application_number)"
                 target="_blank"
                 rel="noopener"
             >
@@ -100,7 +100,7 @@ class extends Component {
             <x-ui.button
                 variant="primary"
                 icon="download"
-                :href="route('pdf.application-form', ['application' => $application, 'action' => 'download'])"
+                :href="route('pdf.application-form', ['appNo' => $application->application_number, 'action' => 'download'])"
             >
                 {{ __('Download PDF') }}
             </x-ui.button>

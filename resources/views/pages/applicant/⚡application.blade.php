@@ -173,13 +173,13 @@ class extends Component {
 
                 @if ($isApplied)
                     <div class="mt-3 flex items-center gap-2 flex-wrap justify-end">
-                        <a href="{{ route('pdf.application-form', $application) }}"
+                        <a href="{{ route('pdf.application-form', $application->application_number) }}"
                             target="_blank" rel="noopener"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-900 transition-colors"
                         >
                             <x-lucide-eye class="size-3.5" /> View Form
                         </a>
-                        <a href="{{ route('pdf.application-form', ['application' => $application, 'action' => 'download']) }}"
+                        <a href="{{ route('pdf.application-form', ['appNo' => $application->application_number, 'action' => 'download']) }}"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-90"
                             style="background:#8b072b;"
                         >
@@ -625,13 +625,13 @@ class extends Component {
             </div>
 
             <div class="flex items-center gap-2 flex-wrap shrink-0">
-                <a href="{{ route('pdf.application-form', $application) }}"
+                <a href="{{ route('pdf.application-form', $application->application_number) }}"
                     target="_blank" rel="noopener"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-900 transition-colors"
                 >
                     <x-lucide-eye class="size-4" /> View Form
                 </a>
-                <a href="{{ route('pdf.application-form', ['application' => $application, 'action' => 'download']) }}"
+                <a href="{{ route('pdf.application-form', ['appNo' => $application->application_number, 'action' => 'download']) }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold text-white transition-opacity hover:opacity-90"
                     style="background:#8b072b;"
                 >
