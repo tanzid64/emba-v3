@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('admission_settings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('batch_id')->constrained()->onDelete('cascade');
+            $table->string('notice')->nullable();
             $table->date('intake_started_at')->nullable();
             $table->date('intake_ended_at')->nullable();
             $table->decimal('application_fee', 8, 2)->default(2500);
