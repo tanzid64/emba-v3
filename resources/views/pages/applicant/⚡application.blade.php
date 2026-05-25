@@ -402,11 +402,13 @@ class extends Component {
                         <p class="text-sm text-gray-500">Review every detail carefully — this will be submitted with your application.</p>
                     </div>
                 </div>
-                <a href="{{ route('applicant.profile') }}"
-                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold text-xs transition-colors border border-gray-200 text-gray-700 hover:bg-gray-50"
-                >
-                    <x-lucide-pencil class="size-3.5" /> Edit profile
-                </a>
+                @unless ($isApplied)
+                    <a href="{{ route('applicant.profile') }}"
+                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold text-xs transition-colors border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    >
+                        <x-lucide-pencil class="size-3.5" /> Edit profile
+                    </a>
+                @endunless
             </div>
 
             {{-- Identity --}}
@@ -605,6 +607,39 @@ class extends Component {
             </a>
         @endif
     </div>
+
+    {{-- ===================== APPLICATION FORM ACTIONS ===================== --}}
+    @if ($isApplied && $application?->id)
+        <div class="mt-5 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-white shrink-0" style="background:#2F1B72;">
+                    <x-lucide-file-text class="size-5" />
+                </span>
+                <div>
+                    <h3 class="font-inter font-bold text-gray-800">Application Form</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">
+                        View or download the submitted form for
+                        <span class="font-mono font-bold text-gray-700">{{ $application->application_number }}</span>.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap shrink-0">
+                <a href="{{ route('pdf.application-form', $application) }}"
+                    target="_blank" rel="noopener"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-900 transition-colors"
+                >
+                    <x-lucide-eye class="size-4" /> View Form
+                </a>
+                <a href="{{ route('pdf.application-form', ['application' => $application, 'action' => 'download']) }}"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold text-white transition-opacity hover:opacity-90"
+                    style="background:#8b072b;"
+                >
+                    <x-lucide-download class="size-4" /> Download
+                </a>
+            </div>
+        </div>
+    @endif
 
     {{-- ===================== SUBMIT CONFIRMATION MODAL ===================== --}}
     <x-ui.modal name="confirm-submit-application" title="Submit Application" maxWidth="md">
