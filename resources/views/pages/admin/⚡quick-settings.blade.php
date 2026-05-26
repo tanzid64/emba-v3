@@ -105,6 +105,21 @@ new class extends Component {
             $value = null;
         }
 
+        if (in_array($field, ['application_number_start_from', 'roll_number_start_from'], true)) {
+            $applicationColumn = $field === 'application_number_start_from' ? 'application_number' : 'roll_number';
+            $currentMax = $this->highestIssuedNumberFor($applicationColumn);
+
+            if ($currentMax !== null && (int) $value <= $currentMax) {
+                $this->addError('fieldValue', __(':label cannot be set to :value — current highest number in this batch is :max.', [
+                    'label' => $this->labelFor($field),
+                    'value' => $value,
+                    'max' => $currentMax,
+                ]));
+
+                return;
+            }
+        }
+
         $this->settings->update([$field => $value]);
 
         Toast::success(__(':label updated.', ['label' => $this->labelFor($field)]));
@@ -198,8 +213,25 @@ new class extends Component {
             'application_fee', 'enrollment_fee', 'admission_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'application_payment_ended_at' => ['nullable', 'date'],
             'exam_date', 'viva_date' => ['nullable', 'date'],
+            'application_number_start_from', 'roll_number_start_from' => ['required', 'integer', 'min:1', 'max:2147483647'],
             default => ['nullable', 'string'],
         };
+    }
+
+    private function highestIssuedNumberFor(string $column): ?int
+    {
+        if (! $this->batch) {
+            return null;
+        }
+
+        $max = \App\Models\Application::where('batch_id', $this->batch->id)
+            ->whereNotNull($column)
+            ->pluck($column)
+            ->map(fn (string $raw): ?int => \App\Services\AdmissionNumberingService::extractSequenceInt($raw, $column))
+            ->filter()
+            ->max();
+
+        return $max === null ? null : (int) $max;
     }
 
     private function rawValueFor(string $field): mixed
@@ -221,6 +253,7 @@ new class extends Component {
     {
         return match ($field) {
             'application_fee', 'enrollment_fee', 'admission_fee' => 'number',
+            'application_number_start_from', 'roll_number_start_from' => 'number',
             'exam_date', 'viva_date' => 'datetime-local',
             default => 'date',
         };
@@ -239,6 +272,8 @@ new class extends Component {
             'admission_fee' => __('Admission Fee'),
             'admit_card_published_at' => __('Admit Card Published'),
             'result_published_at' => __('Result Published At'),
+            'application_number_start_from' => __('Application No. Starts From'),
+            'roll_number_start_from' => __('Roll No. Starts From'),
         ][$field] ?? $field;
     }
 
@@ -253,6 +288,8 @@ new class extends Component {
             'admission_fee' => __('Final tuition / admission charge billed once enrollment is finalised. Used when generating admission invoices for selected candidates.'),
             'exam_date' => __('Scheduled written exam time. Shown on the admit card and on the applicant portal as soon as it is saved.'),
             'viva_date' => __('Scheduled viva voce / interview time. Visible to short-listed applicants after the written exam result is published.'),
+            'application_number_start_from' => __('Starting integer for application numbers in this batch. Cannot be lowered below the highest number already issued.'),
+            'roll_number_start_from' => __('Starting integer for roll numbers in this batch. Cannot be lowered below the highest roll number already issued.'),
         ][$field] ?? '';
     }
 
@@ -295,6 +332,12 @@ new class extends Component {
             return $this->dateOnly($this->settings->{$field});
         }
 
+        if (in_array($field, ['application_number_start_from', 'roll_number_start_from'], true)) {
+            $raw = $this->settings->getRawOriginal($field);
+
+            return $raw === null ? '' : (string) $raw;
+        }
+
         // Datetime fields — use the cast's formatted output as-is.
         $value = $this->settings->{$field};
 
@@ -329,6 +372,8 @@ new class extends Component {
             ['key' => 'application_payment_ended_at', 'kind' => 'date'],
             ['key' => 'enrollment_fee', 'kind' => 'money'],
             ['key' => 'admission_fee', 'kind' => 'money'],
+            ['key' => 'application_number_start_from', 'kind' => 'integer'],
+            ['key' => 'roll_number_start_from', 'kind' => 'integer'],
             ['key' => 'exam_date', 'kind' => 'datetime'],
             ['key' => 'viva_date', 'kind' => 'datetime'],
             ['key' => 'admit_card_published_at', 'kind' => 'milestone'],
