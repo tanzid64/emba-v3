@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('batches/create', 'pages::admin.batches.create')->name('batches.create');
         Route::livewire('applicants', 'pages::admin.applicants')->name('applicants.index');
         Route::livewire('confirmed-applicants', 'pages::admin.confirmed-applicants')->name('confirmed-applicants.index');
+        Route::livewire('exam-centers', 'pages::admin.exam-centers')->name('exam-centers.index');
         Route::livewire('applicants/{application}', 'pages::admin.applicant-show')->name('applicants.show');
         Route::livewire('applicants/{application}/edit', 'pages::admin.applicant-edit')->name('applicants.edit');
         Route::livewire('docs', 'pages::admin.docs')->name('docs');

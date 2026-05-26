@@ -111,6 +111,9 @@
                     <flux:sidebar.item icon="check-badge" :href="route('admin.confirmed-applicants.index')" :current="request()->routeIs('admin.confirmed-applicants.*')" wire:navigate>
                         {{ __('Confirmed Applications') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="building-office-2" :href="route('admin.exam-centers.index')" :current="request()->routeIs('admin.exam-centers.*')" wire:navigate>
+                        {{ __('Exam Center') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Help')" class="grid">
