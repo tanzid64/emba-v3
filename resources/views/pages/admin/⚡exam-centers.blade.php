@@ -4,15 +4,20 @@ use App\Enums\PaymentStatusEnum;
 use App\Models\Application;
 use App\Models\Batch;
 use App\Models\ExamCenter;
+use App\Services\ExamCenterUploadService;
 use App\Support\CurrentBatch;
+use App\Support\Toast;
+use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     #[Url(as: 'q', except: '')]
     public string $search = '';
@@ -21,6 +26,8 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
     public int $perPage = 20;
 
     public ?Batch $batch = null;
+
+    public $csv = null;
 
     public function mount(): void
     {
@@ -41,6 +48,71 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
     {
         $this->search = '';
         $this->resetPage();
+    }
+
+    public function openUploadModal(): void
+    {
+        $this->resetErrorBag();
+        $this->csv = null;
+        $this->dispatch('open-modal', name: 'upload-exam-center');
+    }
+
+    public function closeUploadModal(): void
+    {
+        $this->resetErrorBag();
+        $this->csv = null;
+        $this->dispatch('close-modal', name: 'upload-exam-center');
+    }
+
+    public function isAdmissionClosed(): bool
+    {
+        $raw = $this->batch?->admissionSetting?->getRawOriginal('intake_ended_at');
+
+        return $raw !== null && now()->greaterThan(Carbon::parse($raw)->endOfDay());
+    }
+
+    public function isPaymentClosed(): bool
+    {
+        $raw = $this->batch?->admissionSetting?->getRawOriginal('application_payment_ended_at');
+
+        return $raw !== null && now()->greaterThan(Carbon::parse($raw)->endOfDay());
+    }
+
+    public function canUpload(): bool
+    {
+        return $this->isAdmissionClosed() && $this->isPaymentClosed();
+    }
+
+    public function performUpload(ExamCenterUploadService $service): void
+    {
+        if (! $this->batch || ! $this->canUpload()) {
+            return;
+        }
+
+        $this->validate([
+            'csv' => ['required', 'file', 'mimes:csv,txt', 'max:1024'],
+        ], attributes: [
+            'csv' => __('CSV file'),
+        ]);
+
+        if (! $this->csv instanceof TemporaryUploadedFile) {
+            $this->addError('csv', __('Please choose a CSV file to upload.'));
+
+            return;
+        }
+
+        try {
+            $result = $service->import($this->batch, $this->csv->getRealPath());
+        } catch (\Throwable $e) {
+            $this->addError('csv', $e->getMessage());
+
+            return;
+        }
+
+        $this->csv = null;
+        $this->dispatch('close-modal', name: 'upload-exam-center');
+
+        Toast::success(__('Imported :centers centers / :rooms rooms · seated :assigned applicants.', $result));
     }
 
     public function with(): array
@@ -104,6 +176,11 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
                 @endif
             </p>
         </div>
+        @if ($batch)
+            <x-ui.button variant="primary" icon="upload" wire:click="openUploadModal">
+                {{ __('Upload Exam Center') }}
+            </x-ui.button>
+        @endif
     </div>
 
     @if (! $batch)
@@ -213,4 +290,112 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
             @endforelse
         </x-ui.table>
     @endif
+
+    {{-- ===================== UPLOAD MODAL ===================== --}}
+    <x-ui.modal name="upload-exam-center" :title="__('Upload Exam Centers')" maxWidth="lg">
+        @if ($batch)
+            <div class="space-y-4">
+                {{-- Rules / checklist --}}
+                <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                    <p class="text-sm font-semibold text-zinc-700 mb-3">
+                        {{ __('Both conditions must be satisfied before uploading:') }}
+                    </p>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center gap-2">
+                            @if ($this->isAdmissionClosed())
+                                <x-lucide-check-circle class="size-5 text-green-600 shrink-0" />
+                                <span class="text-zinc-700">{{ __('Admission is not open') }}</span>
+                            @else
+                                <x-lucide-x-circle class="size-5 text-red-600 shrink-0" />
+                                <span class="text-red-700 font-medium">{{ __('Admission is still open') }}</span>
+                            @endif
+                        </li>
+                        <li class="flex items-center gap-2">
+                            @if ($this->isPaymentClosed())
+                                <x-lucide-check-circle class="size-5 text-green-600 shrink-0" />
+                                <span class="text-zinc-700">{{ __('Payment acceptance has closed') }}</span>
+                            @else
+                                <x-lucide-x-circle class="size-5 text-red-600 shrink-0" />
+                                <span class="text-red-700 font-medium">{{ __('Payment acceptance is still open') }}</span>
+                            @endif
+                        </li>
+                    </ul>
+                </div>
+
+                @if ($this->canUpload())
+                    {{-- Sample CSV info --}}
+                    <div class="rounded-lg border border-brand/15 bg-brand-soft px-4 py-3 text-xs text-zinc-700 flex items-start gap-2">
+                        <x-lucide-info class="size-4 shrink-0 text-brand mt-0.5" />
+                        <p class="leading-relaxed">
+                            {{ __('Expected columns:') }}
+                            <code class="font-mono text-zinc-900">center_no, center_name, room_name, capacity</code>.
+                            {{ __('Total capacity must be at least equal to the number of confirmed applicants. Uploading will replace existing centers and reseat all confirmed applicants in roll order.') }}
+                            <a href="{{ asset('sample_csv/exam_centers_sample.csv') }}" download
+                                class="block mt-1 font-semibold text-brand hover:text-brand-dark">
+                                <x-lucide-download class="inline size-3.5 mr-1" />{{ __('Download sample CSV') }}
+                            </a>
+                        </p>
+                    </div>
+
+                    {{-- File picker --}}
+                    <div>
+                        <label for="csv-upload"
+                            class="flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 hover:bg-zinc-100 cursor-pointer transition-colors"
+                            wire:loading.class="opacity-60" wire:target="csv">
+                            <x-lucide-upload class="size-5 text-zinc-500" wire:loading.remove wire:target="csv" />
+                            <x-lucide-loader-2 class="size-5 text-zinc-500 animate-spin" wire:loading
+                                wire:target="csv" />
+                            <span class="text-sm font-semibold text-zinc-700">
+                                <span wire:loading.remove wire:target="csv">
+                                    {{ $csv ? __('Choose a different CSV file') : __('Click to select a CSV file') }}
+                                </span>
+                                <span wire:loading wire:target="csv">{{ __('Uploading…') }}</span>
+                            </span>
+                            <span class="text-xs text-zinc-500">{{ __('CSV up to 1 MB') }}</span>
+                        </label>
+                        <input id="csv-upload" type="file" class="sr-only" accept=".csv,text/csv" wire:model="csv" />
+
+                        @if ($csv instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                            <div class="mt-2 rounded-lg border border-brand/20 bg-brand-soft px-3 py-2 flex items-center gap-2">
+                                <x-lucide-file-check-2 class="size-4 text-brand shrink-0" />
+                                <span
+                                    class="flex-1 text-xs font-medium text-zinc-800 truncate">{{ $csv->getClientOriginalName() }}</span>
+                                <span class="text-xs text-zinc-500">{{ number_format($csv->getSize() / 1024, 1) }}
+                                    KB</span>
+                                <button type="button" wire:click="$set('csv', null)"
+                                    class="text-xs font-semibold text-red-600 hover:text-red-700">
+                                    {{ __('Remove') }}
+                                </button>
+                            </div>
+                        @endif
+
+                        @error('csv')
+                            <p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @else
+                    <p class="text-sm text-zinc-500">
+                        {{ __('Close this dialog and come back once the conditions above are met.') }}
+                    </p>
+                @endif
+            </div>
+
+            {{-- Footer --}}
+            <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+                <x-ui.button variant="ghost" wire:click="closeUploadModal">
+                    {{ __('Close') }}
+                </x-ui.button>
+
+                @if ($this->canUpload())
+                    <x-ui.button variant="primary" wire:click="performUpload" wire:loading.attr="disabled"
+                        wire:target="performUpload,csv">
+                        <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="performUpload" />
+                        <x-lucide-check wire:loading.remove wire:target="performUpload" />
+                        <span wire:loading.remove wire:target="performUpload">{{ __('Save & assign seats') }}</span>
+                        <span wire:loading wire:target="performUpload">{{ __('Processing…') }}</span>
+                    </x-ui.button>
+                @endif
+            </div>
+        @endif
+    </x-ui.modal>
 </div>

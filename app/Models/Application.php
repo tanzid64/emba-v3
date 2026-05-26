@@ -47,6 +47,11 @@ class Application extends Model
         return $this->belongsTo(Batch::class);
     }
 
+    public function examCenter(): BelongsTo
+    {
+        return $this->belongsTo(ExamCenter::class);
+    }
+
     /**
      * Find or create a draft application for the given applicant + current batch.
      * Drafts have no application_number — one is assigned on submit().
