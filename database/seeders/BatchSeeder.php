@@ -76,6 +76,8 @@ class BatchSeeder extends Seeder
                 'application_fee' => 2500,
                 'enrollment_fee' => 500,
                 'admission_fee' => 12000,
+                'application_number_start_from' => 1000,
+                'roll_number_start_from' => 1000,
                 ...$row['settings'],
             ]);
         }
