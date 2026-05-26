@@ -12,6 +12,7 @@ use App\Models\Application;
 use App\Models\Payment;
 use App\Services\AdmissionNumberingService;
 use App\Services\BkashService;
+use App\Services\ResultGenerationService;
 use App\Support\Toast;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -287,5 +288,17 @@ class BkashController extends Controller
             'trx_id' => $response['trxID'] ?? null,
             'paid_at' => now(),
         ])->save();
+
+        // Snapshot profile-derived marks (schooling + experience) so that any
+        // later profile edits don't retroactively change the awarded values.
+        // Idempotent per (batch_id, applicant_id), so replays are safe.
+        try {
+            app(ResultGenerationService::class)->generateForApplication($application);
+        } catch (\Throwable $e) {
+            Log::warning('[Result] Initial snapshot failed for application', [
+                'application_id' => $application->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

@@ -31,5 +31,6 @@ class DatabaseSeeder extends Seeder
         $this->call(ExpHistorySeeder::class);
         $this->call(ApplicationSeeder::class);
         $this->call(ExamCenterSeeder::class);
+        $this->call(AdmissionResultSeeder::class);
     }
 }
