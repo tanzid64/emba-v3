@@ -226,6 +226,7 @@ new class extends Component {
 
         $max = \App\Models\Application::where('batch_id', $this->batch->id)
             ->whereNotNull($column)
+            ->when($column === 'roll_number', fn ($q) => $q->whereNotNull('application_number'))
             ->pluck($column)
             ->map(fn (string $raw): ?int => \App\Services\AdmissionNumberingService::extractSequenceInt($raw, $column))
             ->filter()
