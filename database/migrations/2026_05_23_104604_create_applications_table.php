@@ -18,7 +18,8 @@ return new class extends Migration
             $table->foreignId('applicant_id')->constrained('applicants')->cascadeOnDelete();
             $table->foreignId('batch_id')->constrained('batches')->cascadeOnDelete();
 
-            $table->string('application_number')->unique();
+            $table->string('application_number')->nullable();
+            $table->string('roll_number')->nullable();
             $table->timestamp('applied_at')->nullable();
 
             $table->string('payment_status')->default(PaymentStatusEnum::UNPAID->value)->comment('Enum Ref: PaymentStatusEnum');
@@ -31,7 +32,8 @@ return new class extends Migration
             $table->string('status')->default(ApplicationStatusEnum::PENDING->value)->comment('Enum Ref: ApplicationStatusEnum');
             $table->timestamps();
 
-            $table->unique(['applicant_id', 'batch_id']);
+            $table->unique(['batch_id', 'application_number']);
+            $table->unique(['batch_id', 'roll_number']);
         });
     }
 
