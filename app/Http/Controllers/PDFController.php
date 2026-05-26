@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PaymentStatusEnum;
+use App\Enums\ResultStatusEnum;
+use App\Models\AdmissionResult;
 use App\Models\Applicant;
 use App\Models\Application;
 use App\Models\Batch;
@@ -123,6 +125,63 @@ class PDFController extends Controller
         return $request->input('action') === 'download'
             ? $pdf->download($filename)
             : $pdf->stream($filename);
+    }
+
+    /**
+     * Stream the exam-results report for a batch as a PDF download.
+     * Admin-only. Reads three optional query params used to filter the
+     * rows, matching the Excel export contract:
+     *
+     *   status      — "Passed" / "Failed" (omit / blank = all)
+     *   merit_from  — minimum merit_position (inclusive)
+     *   merit_to    — maximum merit_position (inclusive)
+     */
+    public function generateExamResultsPDF(Request $request, Batch $batch)
+    {
+        $this->ensureAdmin($request);
+
+        $status = $this->normaliseString($request->query('status'));
+        $meritFrom = $this->normaliseInt($request->query('merit_from'));
+        $meritTo = $this->normaliseInt($request->query('merit_to'));
+
+        $base = AdmissionResult::query()
+            ->where('batch_id', $batch->id)
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($meritFrom !== null, fn ($q) => $q->where('merit_position', '>=', $meritFrom))
+            ->when($meritTo !== null, fn ($q) => $q->where('merit_position', '<=', $meritTo));
+
+        $totalCount = (clone $base)->count();
+        $passedCount = (clone $base)->where('status', ResultStatusEnum::PASSED->value)->count();
+
+        $results = $base
+            ->with(['applicant.profile:id,applicant_id,full_name,father_name'])
+            ->orderByRaw('merit_position IS NULL')
+            ->orderBy('merit_position')
+            ->orderByDesc('total_marks')
+            ->get();
+
+        $filename = 'exam-results-'.$batch->code.'-'.now()->format('Ymd-His').'.pdf';
+
+        $pdf = PDF::loadView('pdfs.exam-results', [
+            'batch' => $batch,
+            'results' => $results,
+            'totalCount' => $totalCount,
+            'passedCount' => $passedCount,
+            'failedCount' => $totalCount - $passedCount,
+            'statusFilter' => $status,
+            'meritFrom' => $meritFrom,
+            'meritTo' => $meritTo,
+        ], [], [
+            'orientation' => 'L',
+            'format' => 'A4',
+            'title' => "Exam Results - {$batch->code}",
+        ]);
+
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
+            $filename,
+            ['Content-Type' => 'application/pdf'],
+        );
     }
 
     /**
@@ -359,5 +418,17 @@ class PDFController extends Controller
     private function ensureAdmin(Request $request): void
     {
         abort_unless($request->user() instanceof User, 403);
+    }
+
+    private function normaliseString(mixed $value): ?string
+    {
+        $value = is_string($value) ? trim($value) : null;
+
+        return $value === null || $value === '' ? null : $value;
+    }
+
+    private function normaliseInt(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
     }
 }

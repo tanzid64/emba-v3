@@ -1,7 +1,8 @@
 <?php
 
 use App\Enums\ResultStatusEnum;
-use App\Exports\ExamResultsExport;
+use App\Http\Controllers\ExcelExportController;
+use App\Http\Controllers\PDFController;
 use App\Models\AdmissionResult;
 use App\Models\Batch;
 use App\Services\ResultGenerationService;
@@ -12,7 +13,6 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Maatwebsite\Excel\Facades\Excel;
 
 new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
     use WithPagination;
@@ -99,33 +99,55 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
         $this->dispatch('close-modal', name: 'export-exam-results');
     }
 
-    public function exportExcel()
+    private const EXPORT_RULES = [
+        'exportMeritFrom' => ['nullable', 'integer', 'min:1'],
+        'exportMeritTo' => ['nullable', 'integer', 'min:1', 'gte:exportMeritFrom'],
+    ];
+
+    private const EXPORT_ATTRS = [
+        'exportMeritFrom' => 'merit from',
+        'exportMeritTo' => 'merit to',
+    ];
+
+    /**
+     * Build the synthetic request the export controllers expect. Reuses
+     * the live HTTP request so the auth user (admin) carries through to
+     * the controllers' ensureAdmin() guard.
+     */
+    private function exportRequest(): \Illuminate\Http\Request
+    {
+        $request = request();
+        $request->query->replace([
+            'status' => $this->exportStatusFilter !== '' ? $this->exportStatusFilter : null,
+            'merit_from' => $this->exportMeritFrom,
+            'merit_to' => $this->exportMeritTo,
+        ]);
+
+        return $request;
+    }
+
+    public function exportExcel(ExcelExportController $controller)
     {
         if (! $this->batch) {
             return null;
         }
 
-        $this->validate([
-            'exportMeritFrom' => ['nullable', 'integer', 'min:1'],
-            'exportMeritTo' => ['nullable', 'integer', 'min:1', 'gte:exportMeritFrom'],
-        ], attributes: [
-            'exportMeritFrom' => __('merit from'),
-            'exportMeritTo' => __('merit to'),
-        ]);
-
+        $this->validate(self::EXPORT_RULES, attributes: self::EXPORT_ATTRS);
         $this->dispatch('close-modal', name: 'export-exam-results');
 
-        $filename = 'exam-results-'.$this->batch->code.'-'.now()->format('Ymd-His').'.xlsx';
+        return $controller->examResults($this->exportRequest(), $this->batch);
+    }
 
-        return Excel::download(
-            new ExamResultsExport(
-                batch: $this->batch,
-                statusFilter: $this->exportStatusFilter !== '' ? $this->exportStatusFilter : null,
-                meritFrom: $this->exportMeritFrom,
-                meritTo: $this->exportMeritTo,
-            ),
-            $filename,
-        );
+    public function exportPdf(PDFController $controller)
+    {
+        if (! $this->batch) {
+            return null;
+        }
+
+        $this->validate(self::EXPORT_RULES, attributes: self::EXPORT_ATTRS);
+        $this->dispatch('close-modal', name: 'export-exam-results');
+
+        return $controller->generateExamResultsPDF($this->exportRequest(), $this->batch);
     }
 
     public function with(): array
@@ -192,8 +214,8 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
         </div>
         @if ($batch && $totalCount > 0)
             <div class="flex items-center gap-2 flex-wrap">
-                <x-ui.button variant="outline" icon="file-spreadsheet" wire:click="openExportModal">
-                    {{ __('Export Excel') }}
+                <x-ui.button variant="outline" icon="download" wire:click="openExportModal">
+                    {{ __('Export') }}
                 </x-ui.button>
                 <x-ui.button variant="primary" icon="trophy" wire:click="openGenerateMeritModal">
                     {{ __('Generate Merit List') }}
@@ -354,8 +376,8 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
         @endif
     </x-ui.modal>
 
-    {{-- ===================== EXPORT EXCEL MODAL ===================== --}}
-    <x-ui.modal name="export-exam-results" :title="__('Export Exam Results to Excel')" maxWidth="lg">
+    {{-- ===================== EXPORT MODAL (Excel / PDF) ===================== --}}
+    <x-ui.modal name="export-exam-results" :title="__('Export Exam Results')" maxWidth="lg">
         @if ($batch)
             @php
                 $inputClasses = 'block w-full rounded-lg border border-zinc-200 bg-white text-sm text-zinc-800 shadow-xs px-3 py-1.5 placeholder-zinc-400 focus:outline-none focus:border-brand';
@@ -402,14 +424,21 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
                 </p>
             </div>
 
-            <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+            <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100 flex-wrap">
                 <x-ui.button variant="ghost" wire:click="closeExportModal">
                     {{ __('Cancel') }}
                 </x-ui.button>
+                <x-ui.button variant="outline" wire:click="exportPdf" wire:loading.attr="disabled"
+                    wire:target="exportPdf,exportExcel">
+                    <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="exportPdf" />
+                    <x-lucide-file-text wire:loading.remove wire:target="exportPdf" />
+                    <span wire:loading.remove wire:target="exportPdf">{{ __('Download PDF') }}</span>
+                    <span wire:loading wire:target="exportPdf">{{ __('Building…') }}</span>
+                </x-ui.button>
                 <x-ui.button variant="primary" wire:click="exportExcel" wire:loading.attr="disabled"
-                    wire:target="exportExcel">
+                    wire:target="exportExcel,exportPdf">
                     <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="exportExcel" />
-                    <x-lucide-download wire:loading.remove wire:target="exportExcel" />
+                    <x-lucide-file-spreadsheet wire:loading.remove wire:target="exportExcel" />
                     <span wire:loading.remove wire:target="exportExcel">{{ __('Download Excel') }}</span>
                     <span wire:loading wire:target="exportExcel">{{ __('Building…') }}</span>
                 </x-ui.button>

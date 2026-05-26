@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ExcelExportController;
 use App\Http\Controllers\PDFController;
 use App\Http\Controllers\VerificationController;
 use App\Support\CurrentBatch;
@@ -60,6 +61,14 @@ Route::middleware('auth')->prefix('pdf')->name('pdf.')->group(function () {
     Route::get('seat-labels/{batchId}', [PDFController::class, 'generateSeatLabels'])
         ->name('seat-labels')
         ->whereNumber('batchId');
+    Route::get('exam-results/{batch}', [PDFController::class, 'generateExamResultsPDF'])
+        ->name('exam-results');
+});
+
+// Admin-only Excel exports.
+Route::middleware('auth')->prefix('excel')->name('excel.')->group(function () {
+    Route::get('exam-results/{batch}', [ExcelExportController::class, 'examResults'])
+        ->name('exam-results');
 });
 
 // Public, signed verification pages reached via the QR codes on the
