@@ -23,6 +23,11 @@ return new class extends Migration
             $table->unique(['batch_id', 'center_no', 'room_name']);
             $table->index(['batch_id', 'center_no']);
         });
+
+        Schema::table('applications', function (Blueprint $table) {
+            $table->foreignId('exam_center_id')->nullable()->constrained('exam_centers')->nullOnDelete()->after('roll_number');
+            $table->index(['batch_id', 'exam_center_id']);
+        });
     }
 
     /**

@@ -62,7 +62,7 @@ function writeCsv(array $rows): string
     return $path;
 }
 
-it('imports centers and seats confirmed applicants in roll order', function () {
+it('imports centers and assigns confirmed applicants to rooms in roll order', function () {
     $a = makeConfirmedApp($this->batch, '1000', '1000');
     $b = makeConfirmedApp($this->batch, '1001', '1001');
     $c = makeConfirmedApp($this->batch, '1002', '1002');
@@ -80,11 +80,8 @@ it('imports centers and seats confirmed applicants in roll order', function () {
     $b->refresh();
     $c->refresh();
     expect($a->exam_center_id)->not->toBeNull();
-    expect($a->seat_no)->toBe('01');
-    expect($b->seat_no)->toBe('02');
-    expect($c->seat_no)->toBe('01'); // overflowed into Room 102
     expect($a->exam_center_id)->toBe($b->exam_center_id);
-    expect($c->exam_center_id)->not->toBe($a->exam_center_id);
+    expect($c->exam_center_id)->not->toBe($a->exam_center_id); // overflowed into Room 102
 });
 
 it('replaces existing centers and assignments on re-upload', function () {

@@ -15,9 +15,9 @@ class ExamCenterUploadService
 
     /**
      * Parse and persist exam centers from a CSV, then assign every confirmed
-     * applicant a seat in roll-number order.
+     * applicant to a room in roll-number order.
      *
-     * Replaces all existing centers and seat assignments for the batch.
+     * Replaces all existing centers and assignments for the batch.
      *
      * @return array{centers: int, rooms: int, assigned: int}
      *
@@ -44,7 +44,7 @@ class ExamCenterUploadService
         return DB::transaction(function () use ($batch, $rows) {
             // Clear previous assignments + centers for this batch.
             Application::where('batch_id', $batch->id)
-                ->update(['exam_center_id' => null, 'seat_no' => null]);
+                ->update(['exam_center_id' => null]);
             ExamCenter::where('batch_id', $batch->id)->delete();
 
             // Insert centers in CSV order; track id + capacity to drive seating.
@@ -166,7 +166,7 @@ class ExamCenterUploadService
     }
 
     /**
-     * Assign confirmed applicants to seats: roll-number-ordered, filling
+     * Assign confirmed applicants to rooms: roll-number-ordered, filling
      * one room before moving to the next.
      *
      * @param  list<array{id: int, capacity: int}>  $slots
@@ -191,12 +191,9 @@ class ExamCenterUploadService
                 break;
             }
 
-            $width = max(2, strlen((string) $slot['capacity']));
-
-            for ($seat = 1; $seat <= $slot['capacity'] && $cursor < $total; $seat++) {
+            for ($filled = 0; $filled < $slot['capacity'] && $cursor < $total; $filled++) {
                 Application::where('id', $confirmedIds[$cursor])->update([
                     'exam_center_id' => $slot['id'],
-                    'seat_no' => str_pad((string) $seat, $width, '0', STR_PAD_LEFT),
                 ]);
                 $cursor++;
                 $assigned++;
