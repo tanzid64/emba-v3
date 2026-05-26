@@ -21,7 +21,8 @@ return new class extends Migration
             $table->date('application_payment_ended_at')->nullable();
             $table->integer('application_number_start_from')->default(1000);
             $table->integer('roll_number_start_from')->default(1000);
-            $table->date('admit_card_published_at')->nullable();
+            $table->timestamp('exam_center_uploaded_at')->nullable();
+            $table->timestamp('admit_card_published_at')->nullable();
             $table->timestamp('exam_date')->nullable();
             $table->timestamp('viva_date')->nullable();
             $table->timestamp('result_published_at')->nullable();

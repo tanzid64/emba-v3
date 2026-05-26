@@ -50,6 +50,10 @@ class ExamCenterSeeder extends Seeder
             ExamCenter::insert($rows);
 
             $this->assignConfirmedApplicants($batch);
+
+            // Mark the system-managed milestone so quick-settings + exam-centers
+            // gating treat seeded batches as fully uploaded.
+            $batch->admissionSetting()->update(['exam_center_uploaded_at' => now()]);
         }
     }
 

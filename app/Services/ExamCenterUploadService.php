@@ -65,6 +65,10 @@ class ExamCenterUploadService
 
             $assigned = $this->assignSeats($batch, $slots);
 
+            // System-managed milestone — surfaced read-only in the quick-settings
+            // page and gates the attendance-sheet / seat-label PDFs.
+            $batch->admissionSetting()->update(['exam_center_uploaded_at' => now()]);
+
             return [
                 'centers' => collect($rows)->pluck('center_no')->unique()->count(),
                 'rooms' => count($rows),
