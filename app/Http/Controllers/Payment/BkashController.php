@@ -264,6 +264,9 @@ class BkashController extends Controller
 
     private function completeApplicationPayment(Payment $payment, array $response): void
     {
+        // Caller (BkashController::callback) wraps this in DB::transaction and locks the
+        // Payment PENDING row, so only one execution reaches here per payment — no
+        // separate Application row lock is required.
         $application = Application::find($payment->actor_id);
 
         if (! $application) {

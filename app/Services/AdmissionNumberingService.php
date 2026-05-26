@@ -9,6 +9,13 @@ use Illuminate\Support\Facades\DB;
 
 class AdmissionNumberingService
 {
+    /**
+     * Compute the next application number for the given batch.
+     *
+     * Unlike nextRollNumber(), this method is NOT idempotent — every call
+     * advances the conceptual counter and burns a sequence value. The caller
+     * is responsible for checking `application_number === null` before invoking.
+     */
     public function nextApplicationNumber(Batch $batch): string
     {
         $next = $this->nextSequence(

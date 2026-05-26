@@ -6,6 +6,7 @@ use App\Models\AdmissionSetting;
 use App\Models\Applicant;
 use App\Models\Application;
 use App\Models\Batch;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 beforeEach(function () {
     $this->batch = Batch::create([
@@ -49,4 +50,22 @@ it('does not re-assign application_number on a repeat submit', function () {
     Application::find($application->id)->submit();
 
     expect($application->fresh()->application_number)->toBe($first);
+});
+
+it('throws when the batch has no admission setting', function () {
+    $orphanBatch = Batch::create([
+        'name' => 'EMBA Orphan '.uniqid(),
+        'code' => 'EMBA-OR-'.strtoupper(substr(uniqid(), -4)),
+        'admission_year' => 2026,
+        'status' => BatchStatusEnum::OPEN,
+    ]);
+
+    $applicant = Applicant::factory()->create(['batch_id' => $orphanBatch->id]);
+    $application = Application::draftFor($applicant);
+
+    expect(fn () => $application->submit())
+        ->toThrow(ModelNotFoundException::class);
+
+    expect($application->fresh()->application_number)->toBeNull();
+    expect($application->fresh()->is_applied)->toBeFalse();
 });
