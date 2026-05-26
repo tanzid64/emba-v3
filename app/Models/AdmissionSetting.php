@@ -11,6 +11,8 @@ class AdmissionSetting extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'application_number_start_from' => 'integer',
+        'roll_number_start_from' => 'integer',
         'intake_started_at' => DateFormatCast::class,
         'intake_ended_at' => DateFormatCast::class,
         'application_payment_ended_at' => DateFormatCast::class,

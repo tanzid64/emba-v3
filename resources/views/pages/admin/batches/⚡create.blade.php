@@ -70,8 +70,8 @@ class extends Component {
             'settings.enrollment_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'settings.admission_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
 
-            'settings.application_number_start_from' => ['required', 'integer', 'min:1'],
-            'settings.roll_number_start_from' => ['required', 'integer', 'min:1'],
+            'settings.application_number_start_from' => ['required', 'integer', 'min:1', 'max:2147483647'],
+            'settings.roll_number_start_from' => ['required', 'integer', 'min:1', 'max:2147483647'],
 
             'notice' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ], attributes: [
@@ -282,14 +282,14 @@ class extends Component {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                    <label class="{{ $labelClasses }}">{{ __('Application number starts from') }} <span class="text-red-500">*</span></label>
-                    <x-ui.input type="number" step="1" min="1" wire:model="settings.application_number_start_from" />
+                    <label for="numbering-application" class="{{ $labelClasses }}">{{ __('Application number starts from') }} <span class="text-red-500">*</span></label>
+                    <x-ui.input id="numbering-application" type="number" step="1" min="1" wire:model="settings.application_number_start_from" />
                     @error('settings.application_number_start_from') <p class="{{ $errorClasses }}">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
-                    <label class="{{ $labelClasses }}">{{ __('Roll number starts from') }} <span class="text-red-500">*</span></label>
-                    <x-ui.input type="number" step="1" min="1" wire:model="settings.roll_number_start_from" />
+                    <label for="numbering-roll" class="{{ $labelClasses }}">{{ __('Roll number starts from') }} <span class="text-red-500">*</span></label>
+                    <x-ui.input id="numbering-roll" type="number" step="1" min="1" wire:model="settings.roll_number_start_from" />
                     @error('settings.roll_number_start_from') <p class="{{ $errorClasses }}">{{ $message }}</p> @enderror
                 </div>
             </div>
