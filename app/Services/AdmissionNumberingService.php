@@ -46,6 +46,8 @@ class AdmissionNumberingService
 
             $currentMax = Application::where('batch_id', $batchId)
                 ->whereNotNull($applicationColumn)
+                // Roll numbers are only assigned to submitted applications (which have an application_number).
+                // Excluding rows without application_number prevents stray test/admin-tool rows from advancing the counter.
                 ->when($applicationColumn === 'roll_number', fn ($q) => $q->whereNotNull('application_number'))
                 ->pluck($applicationColumn)
                 ->map(fn (string $raw): ?int => self::extractSequenceInt($raw, $applicationColumn))
@@ -63,7 +65,11 @@ class AdmissionNumberingService
         }
 
         // application_number is stored as "{BATCH_CODE}-{INT}". Take the substring after the last dash.
-        $tail = substr($value, strrpos($value, '-') + 1);
+        $dashPos = strrpos($value, '-');
+        if ($dashPos === false) {
+            return null;
+        }
+        $tail = substr($value, $dashPos + 1);
 
         return ctype_digit($tail) ? (int) $tail : null;
     }

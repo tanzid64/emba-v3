@@ -110,3 +110,33 @@ it('is idempotent when the application already has a roll number', function () {
     $fresh = makeApplication($batch);
     expect($service->nextRollNumber($fresh))->toBe('1000');
 });
+
+it('produces distinct numbers across back-to-back calls in the same batch', function () {
+    // True parallel concurrency cannot be exercised in SQLite (lockForUpdate is a no-op).
+    // This test asserts the spec's intent: two sequential calls, with the first result
+    // persisted before the second, yield strictly increasing numbers. In production the
+    // lockForUpdate on admission_settings serializes concurrent callers the same way.
+    $batch = makeBatchWithSettings();
+    $service = app(AdmissionNumberingService::class);
+
+    $first = $service->nextApplicationNumber($batch);
+    makeApplication($batch, ['application_number' => $first]);
+
+    $second = $service->nextApplicationNumber($batch);
+
+    expect($first)->not->toBe($second);
+    expect($second)->toBe($batch->code.'-1001');
+});
+
+it('increments the next roll number by 1 after assignment', function () {
+    $batch = makeBatchWithSettings();
+    $service = app(AdmissionNumberingService::class);
+
+    $appOne = makeApplication($batch, ['application_number' => $batch->code.'-1000']);
+    $appOne->roll_number = $service->nextRollNumber($appOne);
+    $appOne->save();
+
+    $appTwo = makeApplication($batch, ['application_number' => $batch->code.'-1001']);
+
+    expect($service->nextRollNumber($appTwo))->toBe('1001');
+});
