@@ -18,6 +18,7 @@
         "livewire-development",
         "pest-testing",
         "tailwindcss-development",
-        "alpine-js"
+        "alpine-js",
+        "laravel-livewire"
     ]
 }
