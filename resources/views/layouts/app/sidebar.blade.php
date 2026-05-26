@@ -108,7 +108,7 @@
                     <flux:sidebar.item icon="users" :href="route('admin.applicants.index')" :current="request()->routeIs('admin.applicants.*')" wire:navigate>
                         {{ __('All Applicants') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="user-check" :href="route('admin.confirmed-applicants.index')" :current="request()->routeIs('admin.confirmed-applicants.*')" wire:navigate>
+                    <flux:sidebar.item icon="check-badge" :href="route('admin.confirmed-applicants.index')" :current="request()->routeIs('admin.confirmed-applicants.*')" wire:navigate>
                         {{ __('Confirmed Applications') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
