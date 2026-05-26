@@ -139,6 +139,16 @@
                 <x-lucide-credit-card class="size-4 shrink-0" />
                 Payments
             </a>
+
+            <a href="{{ route('applicant.admit-card') }}"
+                @click="sidebarOpen = false"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors
+                    {{ request()->routeIs('applicant.admit-card') ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}"
+                style="{{ request()->routeIs('applicant.admit-card') ? 'background:#2F1B72;' : '' }}"
+            >
+                <x-lucide-ticket class="size-4 shrink-0" />
+                Admit Card
+            </a>
         </nav>
 
         {{-- Bottom: logout --}}

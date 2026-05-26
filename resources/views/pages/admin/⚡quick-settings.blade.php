@@ -46,6 +46,12 @@ new class extends Component {
 
     public function startEdit(string $field): void
     {
+        if ($this->isLockedByAdmitCard($field)) {
+            $this->dispatch('open-modal', name: 'admit-card-lock-warning');
+
+            return;
+        }
+
         if (! $this->canEdit($field)) {
             return;
         }
@@ -200,7 +206,7 @@ new class extends Component {
         }
 
         // Milestone fields are managed via a workflow elsewhere, not from this card.
-        if (in_array($field, ['admit_card_published_at', 'result_published_at'], true)) {
+        if (in_array($field, ['admit_card_published_at', 'exam_center_uploaded_at', 'result_published_at'], true)) {
             return false;
         }
 
@@ -272,6 +278,7 @@ new class extends Component {
             'enrollment_fee' => __('Enrollment Fee'),
             'admission_fee' => __('Admission Fee'),
             'admit_card_published_at' => __('Admit Card Published'),
+            'exam_center_uploaded_at' => __('Exam Center Uploaded'),
             'result_published_at' => __('Result Published At'),
             'application_number_start_from' => __('Application No. Starts From'),
             'roll_number_start_from' => __('Roll No. Starts From'),
@@ -329,7 +336,7 @@ new class extends Component {
         }
 
         // Date-only fields — strip the time portion from the cast output.
-        if (in_array($field, ['application_payment_ended_at', 'admit_card_published_at'], true)) {
+        if (in_array($field, ['application_payment_ended_at', 'admit_card_published_at', 'exam_center_uploaded_at'], true)) {
             return $this->dateOnly($this->settings->{$field});
         }
 
@@ -360,7 +367,28 @@ new class extends Component {
 
     public function isMilestone(string $field): bool
     {
-        return in_array($field, ['admit_card_published_at', 'result_published_at'], true);
+        return in_array($field, ['admit_card_published_at', 'exam_center_uploaded_at', 'result_published_at'], true);
+    }
+
+    /**
+     * Fields that become read-only once admit cards are published — the
+     * dates printed on the admit card itself must not drift afterward.
+     */
+    private const LOCKED_AFTER_ADMIT_CARD_PUBLISH = [
+        'application_period',
+        'application_payment_ended_at',
+        'exam_date',
+    ];
+
+    public function isAdmitCardPublished(): bool
+    {
+        return (bool) $this->settings?->is_admit_card_published;
+    }
+
+    public function isLockedByAdmitCard(string $field): bool
+    {
+        return $this->isAdmitCardPublished()
+            && in_array($field, self::LOCKED_AFTER_ADMIT_CARD_PUBLISH, true);
     }
 
     /** @return array<int, array{key: string, kind: string}> */
@@ -377,6 +405,7 @@ new class extends Component {
             ['key' => 'roll_number_start_from', 'kind' => 'integer'],
             ['key' => 'exam_date', 'kind' => 'datetime'],
             ['key' => 'viva_date', 'kind' => 'datetime'],
+            ['key' => 'exam_center_uploaded_at', 'kind' => 'milestone'],
             ['key' => 'admit_card_published_at', 'kind' => 'milestone'],
             ['key' => 'result_published_at', 'kind' => 'milestone'],
         ];
@@ -591,5 +620,21 @@ new class extends Component {
                 </x-ui.button>
             </div>
         @endif
+    </x-ui.modal>
+
+    {{-- ===================== ADMIT-CARD LOCK WARNING ===================== --}}
+    <x-ui.modal name="admit-card-lock-warning" :title="__('Field Locked')" maxWidth="md">
+        <div class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <x-lucide-alert-triangle class="size-5 shrink-0 text-amber-600 mt-0.5" />
+            <p class="text-sm text-zinc-700 leading-relaxed">
+                {{ __('You cannot update this after publishing admit cards. Intake dates, payment deadline and exam date are locked once admit cards are published, since these dates are printed on the cards already issued to applicants.') }}
+            </p>
+        </div>
+
+        <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+            <x-ui.button variant="ghost" x-on:click="$dispatch('close-modal', { name: 'admit-card-lock-warning' })">
+                {{ __('Close') }}
+            </x-ui.button>
+        </div>
     </x-ui.modal>
 </div>

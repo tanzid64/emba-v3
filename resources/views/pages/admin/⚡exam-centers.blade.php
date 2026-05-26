@@ -26,6 +26,11 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
         $this->batch = CurrentBatch::get();
     }
 
+    public function openNotUploadedModal(): void
+    {
+        $this->dispatch('open-modal', name: 'exam-center-not-uploaded');
+    }
+
     public function openUploadModal(): void
     {
         $this->resetErrorBag();
@@ -54,9 +59,16 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
         return $raw !== null && now()->greaterThan(Carbon::parse($raw)->endOfDay());
     }
 
+    public function isAdmitCardPublished(): bool
+    {
+        return (bool) $this->batch?->admissionSetting?->is_admit_card_published;
+    }
+
     public function canUpload(): bool
     {
-        return $this->isAdmissionClosed() && $this->isPaymentClosed();
+        return $this->isAdmissionClosed()
+            && $this->isPaymentClosed()
+            && ! $this->isAdmitCardPublished();
     }
 
     public function performUpload(ExamCenterUploadService $service): void
@@ -100,6 +112,7 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
                 'totalCapacity' => 0,
                 'confirmedCount' => 0,
                 'centerCount' => 0,
+                'isExamCenterUploaded' => false,
             ];
         }
 
@@ -128,6 +141,7 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
             'totalCapacity' => $totalCapacity,
             'confirmedCount' => $confirmedCount,
             'centerCount' => $centersByNo->count(),
+            'isExamCenterUploaded' => (bool) $this->batch->admissionSetting?->is_exam_center_uploaded,
         ];
     }
 }; ?>
@@ -151,13 +165,20 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
         </div>
         @if ($batch)
             <div class="flex items-center gap-2 flex-wrap">
-                @if ($roomCount > 0)
+                @if ($isExamCenterUploaded)
                     <x-ui.button variant="outline" icon="file-text"
                         href="{{ route('pdf.attendance-sheet.all', $batch->id) }}" target="_blank" rel="noopener">
                         {{ __('Full Attendance Sheet') }}
                     </x-ui.button>
                     <x-ui.button variant="outline" icon="tag" href="{{ route('pdf.seat-labels', $batch->id) }}"
                         target="_blank" rel="noopener">
+                        {{ __('Seat Labels') }}
+                    </x-ui.button>
+                @else
+                    <x-ui.button variant="outline" icon="file-text" wire:click="openNotUploadedModal">
+                        {{ __('Full Attendance Sheet') }}
+                    </x-ui.button>
+                    <x-ui.button variant="outline" icon="tag" wire:click="openNotUploadedModal">
                         {{ __('Seat Labels') }}
                     </x-ui.button>
                 @endif
@@ -263,11 +284,18 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
                                 </td>
                                 <td class="px-5 py-3 text-right">
                                     @if ($room->assigned_count > 0)
-                                        <x-ui.button size="sm" icon="file-text"
-                                            href="{{ route('pdf.attendance-sheet', $room->id) }}" target="_blank"
-                                            rel="noopener">
-                                            {{ __('Attendance Sheet') }}
-                                        </x-ui.button>
+                                        @if ($isExamCenterUploaded)
+                                            <x-ui.button size="sm" icon="file-text"
+                                                href="{{ route('pdf.attendance-sheet', $room->id) }}" target="_blank"
+                                                rel="noopener">
+                                                {{ __('Attendance Sheet') }}
+                                            </x-ui.button>
+                                        @else
+                                            <x-ui.button size="sm" icon="file-text"
+                                                wire:click="openNotUploadedModal">
+                                                {{ __('Attendance Sheet') }}
+                                            </x-ui.button>
+                                        @endif
                                     @else
                                         <span class="text-xs text-zinc-400">—</span>
                                     @endif
@@ -293,7 +321,7 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
                 {{-- Rules / checklist --}}
                 <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                     <p class="text-sm font-semibold text-zinc-700 mb-3">
-                        {{ __('Both conditions must be satisfied before uploading:') }}
+                        {{ __('All conditions must be satisfied before uploading:') }}
                     </p>
                     <ul class="space-y-2 text-sm">
                         <li class="flex items-center gap-2">
@@ -312,6 +340,15 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
                             @else
                                 <x-lucide-x-circle class="size-5 text-red-600 shrink-0" />
                                 <span class="text-red-700 font-medium">{{ __('Payment acceptance is still open') }}</span>
+                            @endif
+                        </li>
+                        <li class="flex items-center gap-2">
+                            @if (! $this->isAdmitCardPublished())
+                                <x-lucide-check-circle class="size-5 text-green-600 shrink-0" />
+                                <span class="text-zinc-700">{{ __('Admit cards are not published yet') }}</span>
+                            @else
+                                <x-lucide-x-circle class="size-5 text-red-600 shrink-0" />
+                                <span class="text-red-700 font-medium">{{ __('Admit cards are already published — exam centers cannot be re-uploaded') }}</span>
                             @endif
                         </li>
                     </ul>
@@ -392,5 +429,21 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
                 @endif
             </div>
         @endif
+    </x-ui.modal>
+
+    {{-- ===================== NOT-UPLOADED WARNING MODAL ===================== --}}
+    <x-ui.modal name="exam-center-not-uploaded" :title="__('Exam Center Not Uploaded')" maxWidth="md">
+        <div class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <x-lucide-alert-triangle class="size-5 shrink-0 text-amber-600 mt-0.5" />
+            <p class="text-sm text-zinc-700 leading-relaxed">
+                {{ __('Exam center is not uploaded yet. Upload the centers CSV first to generate attendance sheets and seat labels.') }}
+            </p>
+        </div>
+
+        <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+            <x-ui.button variant="ghost" x-on:click="$dispatch('close-modal', { name: 'exam-center-not-uploaded' })">
+                {{ __('Close') }}
+            </x-ui.button>
+        </div>
     </x-ui.modal>
 </div>
