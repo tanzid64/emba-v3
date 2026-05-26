@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Enums\PaymentStatusEnum;
 use App\Models\Applicant;
 use App\Models\Application;
+use App\Models\Batch;
 use App\Models\District;
+use App\Models\ExamCenter;
 use App\Models\Payment;
 use App\Models\Upazila;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
 use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf as PDF;
 
@@ -75,6 +78,186 @@ class PDFController extends Controller
         return $request->input('action') === 'download'
             ? $pdf->download($filename)
             : $pdf->stream($filename);
+    }
+
+    public function generateAdmitCardPDF(string $appNo, Request $request)
+    {
+        $application = Application::where('application_number', $appNo)
+            ->with(['batch.admissionSetting', 'examCenter', 'applicant.profile'])
+            ->firstOrFail();
+
+        $this->ensureCanAccess($request, $application->applicant_id);
+
+        $profile = $application->applicant?->profile;
+
+        $student = (object) [
+            'application_id' => $application->application_number,
+            'full_name' => $profile?->full_name,
+            'father_name' => $profile?->father_name,
+            'mother_name' => $profile?->mother_name,
+            'mobile' => $application->applicant?->phone_number,
+            'photo_path' => $profile?->photo_path,
+        ];
+
+        // Blade reads `$rollAssignment->roll` and `$rollAssignment->examCenter->*`;
+        // Application already carries both — expose via a small shim.
+        $rollAssignment = (object) [
+            'roll' => $application->roll_number,
+            'examCenter' => $application->examCenter,
+        ];
+
+        $batch = $application->batch;
+
+        // Permanent signed URL printed as a QR on the admit card — reuses the
+        // same public verifier as the application form.
+        $verifyUrl = URL::signedRoute('verify.application', [
+            'appNo' => $application->application_number,
+        ]);
+
+        $filename = "EMBA_ADMIT_CARD_{$application->roll_number}.pdf";
+
+        $pdf = PDF::loadView('pdfs.admit-card', compact('student', 'rollAssignment', 'batch', 'verifyUrl'), [], [
+            'title' => "EMBA_Admit_Card_{$application->roll_number}",
+        ]);
+
+        return $request->input('action') === 'download'
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
+    }
+
+    /**
+     * Attendance sheet for a single room (exam center). Admin-only.
+     */
+    public function generateAttendanceSheet(int $centerId, Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $center = ExamCenter::with('batch')->findOrFail($centerId);
+        $students = $this->roomAssignments($centerId);
+
+        $filename = "attendance-sheet-{$center->id}.pdf";
+
+        $pdf = PDF::loadView('pdfs.attendance-sheet', compact('center', 'students'), [], [
+            'title' => "Attendance Sheet - {$center->center_name} - {$center->room_name}",
+        ]);
+
+        return $request->input('action') === 'download'
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
+    }
+
+    /**
+     * Attendance sheets for every room in a batch — grouped by center.
+     * Admin-only.
+     */
+    public function generateAllAttendanceSheets(int $batchId, Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $batch = Batch::findOrFail($batchId);
+
+        $centers = ExamCenter::where('batch_id', $batchId)
+            ->orderBy('center_no')
+            ->orderBy('room_name')
+            ->get()
+            ->groupBy('center_no')
+            ->map(function ($group) {
+                $rooms = $group->map(function ($center) {
+                    $students = $this->roomAssignments($center->id);
+                    $center->students = $students;
+                    $center->student_count = $students->count();
+
+                    return $center;
+                })->filter(fn ($c) => $c->student_count > 0)->values();
+
+                return [
+                    'center_no' => $group->first()->center_no,
+                    'center_name' => $group->first()->center_name,
+                    'rooms' => $rooms,
+                ];
+            })
+            ->filter(fn ($group) => $group['rooms']->count() > 0)
+            ->values();
+
+        $filename = "attendance-sheet-all-{$batch->code}.pdf";
+
+        $pdf = PDF::loadView('pdfs.attendance-sheet-all', compact('centers', 'batch'), [], [
+            'title' => "Attendance Sheet - All Centers - {$batch->code}",
+        ]);
+
+        return $request->input('action') === 'download'
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
+    }
+
+    /**
+     * Seat labels for every confirmed applicant in a batch. Admin-only.
+     */
+    public function generateSeatLabels(int $batchId, Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $batch = Batch::findOrFail($batchId);
+
+        $assignments = Application::query()
+            ->where('batch_id', $batchId)
+            ->whereIn('payment_status', [PaymentStatusEnum::PAID->value, PaymentStatusEnum::COMPLETED->value])
+            ->whereNotNull('roll_number')
+            ->with('applicant.profile:id,applicant_id,full_name,photo')
+            ->orderBy('roll_number')
+            ->get()
+            ->map(fn (Application $app) => $this->assignmentShim($app));
+
+        // Heavy regex backtracking can blow the default limit on large batches.
+        ini_set('pcre.backtrack_limit', '50000000');
+
+        $filename = "seat-labels-{$batch->code}.pdf";
+
+        $pdf = PDF::loadView('pdfs.seat-labels', compact('assignments', 'batch'), [], [
+            'title' => "Seat Labels - {$batch->code}",
+        ]);
+
+        return $request->input('action') === 'download'
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
+    }
+
+    /**
+     * Confirmed applicants assigned to a room, shaped to look like v2's
+     * RollAssignment so the imported templates render without edits.
+     */
+    private function roomAssignments(int $centerId): Collection
+    {
+        return Application::query()
+            ->where('exam_center_id', $centerId)
+            ->whereIn('payment_status', [PaymentStatusEnum::PAID->value, PaymentStatusEnum::COMPLETED->value])
+            ->whereNotNull('roll_number')
+            ->with('applicant.profile:id,applicant_id,full_name,photo')
+            ->orderBy('roll_number')
+            ->get()
+            ->map(fn (Application $app) => $this->assignmentShim($app));
+    }
+
+    /**
+     * Shape an Application to match the v2 template's
+     * `$assignment->roll` and `$assignment->student->*` contract.
+     *
+     * `photo_path` is the absolute storage path from
+     * ApplicantProfile::getPhotoPathAttribute() — same strategy the
+     * application-form PDF uses, so it survives without `storage:link`.
+     */
+    private function assignmentShim(Application $app): object
+    {
+        $profile = $app->applicant?->profile;
+
+        return (object) [
+            'roll' => $app->roll_number,
+            'student' => (object) [
+                'full_name' => $profile?->full_name,
+                'photo_path' => $profile?->photo_path,
+                'mobile' => $app->applicant?->phone_number,
+            ],
+        ];
     }
 
     /**
@@ -167,5 +350,14 @@ class PDFController extends Controller
             $user instanceof Applicant && $user->getKey() === $applicantId,
             403,
         );
+    }
+
+    /**
+     * Admin-only gate for attendance sheets / seat labels. Applicants must
+     * not be able to enumerate the roll list of an entire room or batch.
+     */
+    private function ensureAdmin(Request $request): void
+    {
+        abort_unless($request->user() instanceof User, 403);
     }
 }

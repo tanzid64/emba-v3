@@ -10,20 +10,12 @@ use App\Support\Toast;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
-use Livewire\WithPagination;
 
 new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
-    use WithFileUploads, WithPagination;
-
-    #[Url(as: 'q', except: '')]
-    public string $search = '';
-
-    #[Url(as: 'per', except: 20)]
-    public int $perPage = 20;
+    use WithFileUploads;
 
     public ?Batch $batch = null;
 
@@ -32,22 +24,6 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
     public function mount(): void
     {
         $this->batch = CurrentBatch::get();
-    }
-
-    public function updatedSearch(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatedPerPage(): void
-    {
-        $this->resetPage();
-    }
-
-    public function clearSearch(): void
-    {
-        $this->search = '';
-        $this->resetPage();
     }
 
     public function openUploadModal(): void
@@ -119,42 +95,39 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
     {
         if (! $this->batch) {
             return [
-                'centers' => null,
+                'centersByNo' => collect(),
+                'roomCount' => 0,
                 'totalCapacity' => 0,
                 'confirmedCount' => 0,
                 'centerCount' => 0,
             ];
         }
 
-        $term = trim($this->search);
-
-        $centers = ExamCenter::query()
+        $rooms = ExamCenter::query()
             ->where('batch_id', $this->batch->id)
-            ->when($term !== '', function ($query) use ($term) {
-                $like = '%'.$term.'%';
-                $query->where(function ($q) use ($like) {
-                    $q->where('center_no', 'like', $like)
-                        ->orWhere('center_name', 'like', $like)
-                        ->orWhere('room_name', 'like', $like);
-                });
-            })
+            ->withCount([
+                'applications as assigned_count' => fn ($q) => $q->whereIn(
+                    'payment_status',
+                    [PaymentStatusEnum::PAID->value, PaymentStatusEnum::COMPLETED->value]
+                ),
+            ])
             ->orderBy('center_no')
             ->orderBy('room_name')
-            ->paginate($this->perPage);
+            ->get();
 
-        $totalCapacity = (int) ExamCenter::where('batch_id', $this->batch->id)->sum('capacity');
+        $centersByNo = $rooms->groupBy('center_no');
+
+        $totalCapacity = (int) $rooms->sum('capacity');
         $confirmedCount = Application::where('batch_id', $this->batch->id)
             ->whereIn('payment_status', [PaymentStatusEnum::PAID->value, PaymentStatusEnum::COMPLETED->value])
             ->count();
-        $centerCount = ExamCenter::where('batch_id', $this->batch->id)
-            ->distinct('center_no')
-            ->count('center_no');
 
         return [
-            'centers' => $centers,
+            'centersByNo' => $centersByNo,
+            'roomCount' => $rooms->count(),
             'totalCapacity' => $totalCapacity,
             'confirmedCount' => $confirmedCount,
-            'centerCount' => $centerCount,
+            'centerCount' => $centersByNo->count(),
         ];
     }
 }; ?>
@@ -177,9 +150,21 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
             </p>
         </div>
         @if ($batch)
-            <x-ui.button variant="primary" icon="upload" wire:click="openUploadModal">
-                {{ __('Upload Exam Center') }}
-            </x-ui.button>
+            <div class="flex items-center gap-2 flex-wrap">
+                @if ($roomCount > 0)
+                    <x-ui.button variant="outline" icon="file-text"
+                        href="{{ route('pdf.attendance-sheet.all', $batch->id) }}" target="_blank" rel="noopener">
+                        {{ __('Full Attendance Sheet') }}
+                    </x-ui.button>
+                    <x-ui.button variant="outline" icon="tag" href="{{ route('pdf.seat-labels', $batch->id) }}"
+                        target="_blank" rel="noopener">
+                        {{ __('Seat Labels') }}
+                    </x-ui.button>
+                @endif
+                <x-ui.button variant="primary" icon="upload" wire:click="openUploadModal">
+                    {{ __('Upload Exam Center') }}
+                </x-ui.button>
+            </div>
         @endif
     </div>
 
@@ -201,7 +186,7 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
                     {{ number_format($centerCount) }}
                 </p>
                 <p class="text-xs text-zinc-500 mt-1">
-                    {{ trans_choice(':count room|:count rooms', $centers?->total() ?? 0, ['count' => number_format($centers?->total() ?? 0)]) }}
+                    {{ trans_choice(':count room|:count rooms', $roomCount, ['count' => number_format($roomCount)]) }}
                 </p>
             </div>
 
@@ -232,63 +217,73 @@ new #[Title('Exam Centers')] #[Layout('layouts.app')] class extends Component {
             </div>
         </div>
 
-        <x-ui.table :paginate="$centers">
-            <x-slot:toolbar>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <div class="flex-1 min-w-[260px] max-w-md">
-                        <x-ui.input icon="search" clearable type="search"
-                            placeholder="{{ __('Search by center no, name, or room…') }}"
-                            wire:model.live.debounce.400ms="search" />
-                    </div>
+        {{-- Centers & Rooms (grouped) --}}
+        @forelse ($centersByNo as $centerNo => $rooms)
+            <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white">
 
-                    <select wire:model.live="perPage"
-                        class="h-9 rounded-lg border border-zinc-200 bg-white px-3 pe-8 text-sm text-zinc-700 shadow-xs focus:outline-none focus:border-zinc-400">
-                        @foreach ([10, 20, 50, 100] as $size)
-                            <option value="{{ $size }}">{{ $size }} / {{ __('page') }}</option>
-                        @endforeach
-                    </select>
-
-                    <div class="flex items-center gap-2 text-xs text-zinc-400" wire:loading
-                        wire:target="search,perPage">
-                        <x-lucide-loader-2 class="size-3.5 animate-spin" />
-                        {{ __('Loading…') }}
+                {{-- Center header --}}
+                <div class="flex items-center justify-between bg-zinc-50 px-5 py-3">
+                    <div class="flex items-center gap-3">
+                        <span class="font-semibold text-zinc-900">{{ $rooms->first()->center_name }}</span>
+                        <span class="rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-medium text-zinc-600">
+                            {{ __('Center :no', ['no' => $centerNo]) }}
+                        </span>
                     </div>
+                    <span class="text-xs text-zinc-400">
+                        {{ trans_choice(':count room|:count rooms', $rooms->count(), ['count' => $rooms->count()]) }}
+                    </span>
                 </div>
-            </x-slot:toolbar>
 
-            <x-slot:columns>
-                <th class="text-left font-semibold text-zinc-700 px-4 py-3 w-12">{{ __('SL') }}</th>
-                <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Center No.') }}</th>
-                <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Center Name') }}</th>
-                <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Room') }}</th>
-                <th class="text-right font-semibold text-zinc-700 px-4 py-3 w-32">{{ __('Capacity') }}</th>
-            </x-slot:columns>
-
-            @forelse ($centers as $center)
-                @php $sl = ($centers->firstItem() ?? 0) + $loop->index; @endphp
-                <tr class="hover:bg-zinc-50/60 transition-colors">
-                    <td class="px-4 py-3 text-zinc-500 tabular-nums">{{ $sl }}</td>
-                    <td class="px-4 py-3 font-mono font-semibold text-zinc-800 whitespace-nowrap">
-                        {{ $center->center_no }}
-                    </td>
-                    <td class="px-4 py-3 text-zinc-700">{{ $center->center_name }}</td>
-                    <td class="px-4 py-3 text-zinc-700 whitespace-nowrap">{{ $center->room_name }}</td>
-                    <td class="px-4 py-3 text-right tabular-nums font-semibold text-zinc-900">
-                        {{ number_format($center->capacity) }}
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="5" class="px-4 py-10 text-center text-zinc-500">
-                        @if ($search !== '')
-                            {{ __('No exam centers match the current search.') }}
-                        @else
-                            {{ __('No exam centers configured for this batch yet.') }}
-                        @endif
-                    </td>
-                </tr>
-            @endforelse
-        </x-ui.table>
+                {{-- Rooms table --}}
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr
+                            class="border-b border-zinc-200 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                            <th class="px-5 py-2.5">{{ __('Room') }}</th>
+                            <th class="px-5 py-2.5 text-center">{{ __('Capacity') }}</th>
+                            <th class="px-5 py-2.5 text-center">{{ __('Assigned') }}</th>
+                            <th class="px-5 py-2.5 text-right">{{ __('Action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100">
+                        @foreach ($rooms as $room)
+                            <tr>
+                                <td class="px-5 py-3 font-medium text-zinc-900">{{ $room->room_name }}</td>
+                                <td class="px-5 py-3 text-center text-zinc-500 tabular-nums">
+                                    {{ number_format($room->capacity) }}
+                                </td>
+                                <td class="px-5 py-3 text-center tabular-nums">
+                                    <span @class([
+                                        'font-semibold',
+                                        'text-emerald-600' => $room->assigned_count > 0,
+                                        'text-zinc-400' => $room->assigned_count === 0,
+                                    ])>
+                                        {{ number_format($room->assigned_count) }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-3 text-right">
+                                    @if ($room->assigned_count > 0)
+                                        <x-ui.button size="sm" icon="file-text"
+                                            href="{{ route('pdf.attendance-sheet', $room->id) }}" target="_blank"
+                                            rel="noopener">
+                                            {{ __('Attendance Sheet') }}
+                                        </x-ui.button>
+                                    @else
+                                        <span class="text-xs text-zinc-400">—</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @empty
+            <div class="rounded-xl border border-dashed border-zinc-200 bg-white px-6 py-16 text-center">
+                <p class="text-sm text-zinc-500">
+                    {{ __('No exam centers uploaded yet for this batch.') }}
+                </p>
+            </div>
+        @endforelse
     @endif
 
     {{-- ===================== UPLOAD MODAL ===================== --}}

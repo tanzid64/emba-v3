@@ -17,6 +17,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('applicants', 'pages::admin.applicants')->name('applicants.index');
         Route::livewire('confirmed-applicants', 'pages::admin.confirmed-applicants')->name('confirmed-applicants.index');
         Route::livewire('exam-centers', 'pages::admin.exam-centers')->name('exam-centers.index');
+        Route::livewire('admit-cards', 'pages::admin.admit-cards')->name('admit-cards.index');
         Route::livewire('applicants/{application}', 'pages::admin.applicant-show')->name('applicants.show');
         Route::livewire('applicants/{application}/edit', 'pages::admin.applicant-edit')->name('applicants.edit');
         Route::livewire('docs', 'pages::admin.docs')->name('docs');
@@ -42,6 +43,22 @@ Route::group([
         ->name('application-form');
     Route::get('payment-receipt/{paymentNo}', [PDFController::class, 'generatePaymentReceiptPDF'])
         ->name('payment-receipt');
+    Route::get('admit-card/{appNo}', [PDFController::class, 'generateAdmitCardPDF'])
+        ->name('admit-card');
+});
+
+// Admin-only batch/room reporting PDFs (attendance sheets, seat labels).
+// The controller methods enforce admin-only access via ensureAdmin().
+Route::middleware('auth')->prefix('pdf')->name('pdf.')->group(function () {
+    Route::get('attendance-sheet/{centerId}', [PDFController::class, 'generateAttendanceSheet'])
+        ->name('attendance-sheet')
+        ->whereNumber('centerId');
+    Route::get('attendance-sheet-all/{batchId}', [PDFController::class, 'generateAllAttendanceSheets'])
+        ->name('attendance-sheet.all')
+        ->whereNumber('batchId');
+    Route::get('seat-labels/{batchId}', [PDFController::class, 'generateSeatLabels'])
+        ->name('seat-labels')
+        ->whereNumber('batchId');
 });
 
 // Public, signed verification pages reached via the QR codes on the

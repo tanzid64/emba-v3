@@ -114,6 +114,9 @@
                     <flux:sidebar.item icon="building-office-2" :href="route('admin.exam-centers.index')" :current="request()->routeIs('admin.exam-centers.*')" wire:navigate>
                         {{ __('Exam Center') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="identification" :href="route('admin.admit-cards.index')" :current="request()->routeIs('admin.admit-cards.*')" wire:navigate>
+                        {{ __('Admit Cards') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Help')" class="grid">

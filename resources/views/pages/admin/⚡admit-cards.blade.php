@@ -10,7 +10,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Component {
+new #[Title('Admit Cards')] #[Layout('layouts.app')] class extends Component {
     use WithPagination;
 
     #[Url(as: 'q', except: '')]
@@ -53,14 +53,17 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
         $applications = Application::query()
             ->where('batch_id', $this->batch->id)
             ->whereIn('payment_status', [PaymentStatusEnum::PAID->value, PaymentStatusEnum::COMPLETED->value])
-            ->with(['applicant:id,email,phone_number', 'applicant.profile:id,applicant_id,full_name,father_name,mother_name,photo'])
+            ->with([
+                'applicant:id,email,phone_number',
+                'applicant.profile:id,applicant_id,full_name,photo',
+                'examCenter:id,center_no,center_name,room_name',
+            ])
             ->when($term !== '', function ($query) use ($term) {
                 $like = '%'.$term.'%';
 
                 $query->where(function ($q) use ($like) {
                     $q->where('application_number', 'like', $like)
                         ->orWhere('roll_number', 'like', $like)
-                        ->orWhere('trx_id', 'like', $like)
                         ->orWhereHas('applicant', function ($a) use ($like) {
                             $a->where('email', 'like', $like)->orWhere('phone_number', 'like', $like);
                         })
@@ -81,21 +84,21 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
     {{-- Header --}}
     <div class="flex items-start justify-between flex-wrap gap-3">
         <div>
-            <h1 class="text-xl font-bold text-zinc-900">{{ __('Confirmed Applications') }}</h1>
+            <h1 class="text-xl font-bold text-zinc-900">{{ __('Admit Cards') }}</h1>
             <p class="text-sm text-zinc-500 mt-1">
                 @if ($batch)
-                    {{ __('Paid applications with assigned roll numbers under') }}
+                    {{ __('View or download admit cards for paid applicants under') }}
                     <span class="font-semibold text-zinc-700">{{ $batch->name }}</span>
                     <span class="text-zinc-400">·</span>
                     <span class="font-mono text-zinc-600">{{ $batch->code }}</span>
                 @else
-                    {{ __('Select a batch from the sidebar to view its confirmed applications.') }}
+                    {{ __('Select a batch from the sidebar to view its admit cards.') }}
                 @endif
             </p>
         </div>
         @if ($batch && $applications)
             <x-ui.badge size="sm" color="green">
-                {{ trans_choice(':count confirmed|:count confirmed', $applications->total(), ['count' => number_format($applications->total())]) }}
+                {{ trans_choice(':count applicant|:count applicants', $applications->total(), ['count' => number_format($applications->total())]) }}
             </x-ui.badge>
         @endif
     </div>
@@ -103,7 +106,7 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
     @if (! $batch)
         <div class="rounded-xl border border-dashed border-zinc-200 bg-white px-6 py-16 text-center">
             <p class="text-sm text-zinc-500">
-                {{ __('No batch selected. Pick one from the sidebar to load its confirmed applications.') }}</p>
+                {{ __('No batch selected. Pick one from the sidebar to load its admit cards.') }}</p>
         </div>
     @else
         <x-ui.table :paginate="$applications">
@@ -111,7 +114,7 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="flex-1 min-w-[260px] max-w-md">
                         <x-ui.input icon="search" clearable type="search"
-                            placeholder="{{ __('Search by name, roll, app. ID, trx, mobile, email…') }}"
+                            placeholder="{{ __('Search by name, roll, app. ID, mobile, email…') }}"
                             wire:model.live.debounce.400ms="search" />
                     </div>
 
@@ -136,15 +139,14 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
                 <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Roll No.') }}</th>
                 <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('App. ID') }}</th>
                 <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Name') }}</th>
-                <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Parents') }}</th>
-                <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Contact') }}</th>
-                <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Payment') }}</th>
+                <th class="text-left font-semibold text-zinc-700 px-4 py-3">{{ __('Exam Center') }}</th>
                 <th class="text-right font-semibold text-zinc-700 px-4 py-3 w-32">{{ __('Action') }}</th>
             </x-slot:columns>
 
             @forelse ($applications as $application)
                 @php
                     $profile = $application->applicant?->profile;
+                    $center = $application->examCenter;
                     $sl = ($applications->firstItem() ?? 0) + $loop->index;
                 @endphp
                 <tr class="hover:bg-zinc-50/60 transition-colors align-top">
@@ -160,10 +162,10 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
                     </td>
 
                     <td class="px-4 py-3 font-mono whitespace-nowrap">
-                        <x-ui.tooltip text="{{ __('View application form') }}">
-                            <a href="{{ route('pdf.application-form', $application->application_number) }}"
+                        <x-ui.tooltip text="{{ __('View admit card') }}">
+                            <a href="{{ route('pdf.admit-card', $application->application_number) }}"
                                 target="_blank" rel="noopener"
-                                aria-label="{{ __('View application form') }}"
+                                aria-label="{{ __('View admit card') }}"
                                 class="text-brand hover:underline transition-colors">
                                 {{ $application->application_number }}
                             </a>
@@ -175,57 +177,32 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
                     </td>
 
                     <td class="px-4 py-3 text-sm text-zinc-700">
-                        @if ($profile)
-                            <p><span class="font-semibold text-zinc-600">{{ __("Father's Name") }}:</span>
-                                {{ $profile->father_name }}</p>
-                            <p><span class="font-semibold text-zinc-600">{{ __("Mother's Name") }}:</span>
-                                {{ $profile->mother_name }}</p>
+                        @if ($center)
+                            <p class="font-semibold">{{ $center->center_name }}</p>
+                            <p class="text-xs text-zinc-500">
+                                <span class="font-mono">{{ $center->center_no }}</span>
+                                <span class="text-zinc-400">·</span>
+                                {{ $center->room_name }}
+                            </p>
                         @else
-                            <span class="text-zinc-400 italic">{{ __('Profile not completed') }}</span>
+                            <span class="text-zinc-400 italic">{{ __('Not assigned') }}</span>
                         @endif
-                    </td>
-
-                    <td class="px-4 py-3 text-sm text-zinc-700">
-                        <p class="whitespace-nowrap">{{ $application->applicant?->phone_number ?? '—' }}</p>
-                        <p class="text-zinc-500 break-all">{{ $application->applicant?->email ?? '—' }}</p>
-                    </td>
-
-                    <td class="px-4 py-3 text-sm">
-                        <div class="flex flex-col gap-1">
-                            @if ($application->trx_id)
-                                <p class="text-xs text-zinc-700"><span
-                                        class="font-semibold">{{ __('Trx') }}:</span> {{ $application->trx_id }}</p>
-                            @endif
-
-                            @if ($application->paid_at)
-                                <p class="text-xs text-zinc-500"><span
-                                        class="font-semibold">{{ __('Paid') }}:</span>
-                                    {{ $application->paid_at['formatted'] ?? '—' }}</p>
-                            @endif
-                        </div>
                     </td>
 
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-end gap-1.5">
-                            <x-ui.tooltip text="{{ __('View applicant') }}">
-                                <a href="{{ route('admin.applicants.show', $application) }}" wire:navigate
-                                    aria-label="{{ __('View applicant') }}"
+                            <x-ui.tooltip text="{{ __('View admit card') }}">
+                                <a href="{{ route('pdf.admit-card', $application->application_number) }}"
+                                    target="_blank" rel="noopener"
+                                    aria-label="{{ __('View admit card') }}"
                                     class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors">
                                     <x-lucide-eye class="size-4" />
                                 </a>
                             </x-ui.tooltip>
 
-                            <x-ui.tooltip text="{{ __('Edit applicant') }}">
-                                <a href="{{ route('admin.applicants.edit', $application) }}" wire:navigate
-                                    aria-label="{{ __('Edit applicant') }}"
-                                    class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors">
-                                    <x-lucide-pencil class="size-4" />
-                                </a>
-                            </x-ui.tooltip>
-
-                            <x-ui.tooltip text="{{ __('Download application form') }}">
-                                <a href="{{ route('pdf.application-form', ['appNo' => $application->application_number, 'action' => 'download']) }}"
-                                    aria-label="{{ __('Download application form') }}"
+                            <x-ui.tooltip text="{{ __('Download admit card') }}">
+                                <a href="{{ route('pdf.admit-card', ['appNo' => $application->application_number, 'action' => 'download']) }}"
+                                    aria-label="{{ __('Download admit card') }}"
                                     class="inline-flex items-center justify-center size-8 rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-brand/40 hover:text-brand transition-colors">
                                     <x-lucide-download class="size-4" />
                                 </a>
@@ -235,11 +212,11 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="px-4 py-10 text-center text-zinc-500">
+                    <td colspan="7" class="px-4 py-10 text-center text-zinc-500">
                         @if ($search !== '')
-                            {{ __('No confirmed applications match the current search.') }}
+                            {{ __('No paid applicants match the current search.') }}
                         @else
-                            {{ __('No confirmed applications yet for this batch.') }}
+                            {{ __('No paid applicants yet for this batch.') }}
                         @endif
                     </td>
                 </tr>
