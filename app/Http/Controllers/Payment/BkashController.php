@@ -10,6 +10,7 @@ use App\Exceptions\BkashException;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Payment;
+use App\Services\AdmissionNumberingService;
 use App\Services\BkashService;
 use App\Support\Toast;
 use Carbon\Carbon;
@@ -269,7 +270,12 @@ class BkashController extends Controller
             return;
         }
 
-        $application->update([
+        if ($application->roll_number === null) {
+            $application->roll_number = app(AdmissionNumberingService::class)
+                ->nextRollNumber($application);
+        }
+
+        $application->fill([
             'status' => ApplicationStatusEnum::COMPLETED,
             'payment_status' => PaymentStatusEnum::PAID,
             'payment_method' => PaymentMethodEnum::BKASH,
@@ -277,6 +283,6 @@ class BkashController extends Controller
             'payment_id' => $response['paymentID'] ?? null,
             'trx_id' => $response['trxID'] ?? null,
             'paid_at' => now(),
-        ]);
+        ])->save();
     }
 }
