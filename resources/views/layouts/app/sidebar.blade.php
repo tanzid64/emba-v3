@@ -117,6 +117,9 @@
                     <flux:sidebar.item icon="identification" :href="route('admin.admit-cards.index')" :current="request()->routeIs('admin.admit-cards.*')" wire:navigate>
                         {{ __('Admit Cards') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="trophy" :href="route('admin.exam-results.index')" :current="request()->routeIs('admin.exam-results.*')" wire:navigate>
+                        {{ __('Exam Results') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Help')" class="grid">
