@@ -46,7 +46,7 @@ it('does not re-assign application_number on a repeat submit', function () {
     $application->submit();
     $first = $application->fresh()->application_number;
 
-    $application->submit();
+    Application::find($application->id)->submit();
 
     expect($application->fresh()->application_number)->toBe($first);
 });

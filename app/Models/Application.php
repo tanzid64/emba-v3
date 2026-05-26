@@ -78,6 +78,18 @@ class Application extends Model
         }
 
         DB::transaction(function (): void {
+            $locked = self::where('id', $this->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Another request finalised this application while we were waiting on the lock.
+            // Resync this in-memory instance from the locked row and bail out.
+            if ($locked->getRawOriginal('applied_at') !== null) {
+                $this->setRawAttributes($locked->getAttributes(), sync: true);
+
+                return;
+            }
+
             $this->loadMissing('batch');
 
             if ($this->application_number === null) {
