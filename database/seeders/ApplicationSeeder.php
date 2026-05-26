@@ -37,6 +37,10 @@ class ApplicationSeeder extends Seeder
 
     private const UNPAID_PER_BATCH = 750;
 
+    // Active batch is mid-cycle — fewer paid so the dev fixture mirrors a
+    // batch that has not yet reached its final paid count.
+    private const PAID_FOR_ACTIVE_BATCH = 240;
+
     public function run(): void
     {
         $batches = Batch::with('admissionSetting')->orderBy('id')->get();
@@ -73,8 +77,8 @@ class ApplicationSeeder extends Seeder
         // For the active batch, tanzid is at index 0; we want him in the unpaid range, so we paid the
         // bulk applicants first and put tanzid + remaining bulk applicants in the unpaid range.
         if ($isActive) {
-            $paidApplicants = $bulkApplicants->take(self::PAID_PER_BATCH);
-            $unpaidApplicants = collect([$tanzid])->concat($bulkApplicants->slice(self::PAID_PER_BATCH)->values()->all());
+            $paidApplicants = $bulkApplicants->take(self::PAID_FOR_ACTIVE_BATCH);
+            $unpaidApplicants = collect([$tanzid])->concat($bulkApplicants->slice(self::PAID_FOR_ACTIVE_BATCH)->values()->all());
         } else {
             $paidApplicants = $allApplicants->take(self::PAID_PER_BATCH);
             $unpaidApplicants = $allApplicants->slice(self::PAID_PER_BATCH)->take(self::UNPAID_PER_BATCH);
