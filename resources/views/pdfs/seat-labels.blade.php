@@ -34,9 +34,7 @@
         @foreach ($chunk->chunk(2) as $pair)
             <tr>
                 @foreach ($pair as $assignment)
-                    @php
-                        $photoPath = $assignment->student?->photo_path;
-                    @endphp
+                    @php $photoPath = $assignment->student?->photo_path; @endphp
                     <td width="47%" style="padding:5px; vertical-align:top;">
                         <table width="320" style="border:1px solid #000; font-size:20px; height:190px;" class="tag-table">
                             <tr>
@@ -76,6 +74,7 @@
                 <td height="30" colspan="2"></td>
             </tr>
         @endforeach
+
     </table>
 
 @endforeach

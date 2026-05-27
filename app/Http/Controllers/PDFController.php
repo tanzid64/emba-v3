@@ -146,9 +146,9 @@ class PDFController extends Controller
 
         $base = AdmissionResult::query()
             ->where('batch_id', $batch->id)
-            ->when($status, fn ($q) => $q->where('status', $status))
-            ->when($meritFrom !== null, fn ($q) => $q->where('merit_position', '>=', $meritFrom))
-            ->when($meritTo !== null, fn ($q) => $q->where('merit_position', '<=', $meritTo));
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($meritFrom !== null, fn($q) => $q->where('merit_position', '>=', $meritFrom))
+            ->when($meritTo !== null, fn($q) => $q->where('merit_position', '<=', $meritTo));
 
         $totalCount = (clone $base)->count();
         $passedCount = (clone $base)->where('status', ResultStatusEnum::PASSED->value)->count();
@@ -160,7 +160,7 @@ class PDFController extends Controller
             ->orderByDesc('total_marks')
             ->get();
 
-        $filename = 'exam-results-'.$batch->code.'-'.now()->format('Ymd-His').'.pdf';
+        $filename = 'exam-results-' . $batch->code . '-' . now()->format('Ymd-His') . '.pdf';
 
         $pdf = PDF::loadView('pdfs.exam-results', [
             'batch' => $batch,
@@ -178,7 +178,7 @@ class PDFController extends Controller
         ]);
 
         return response()->streamDownload(
-            fn () => print ($pdf->output()),
+            fn() => print($pdf->output()),
             $filename,
             ['Content-Type' => 'application/pdf'],
         );
@@ -198,6 +198,9 @@ class PDFController extends Controller
 
         $pdf = PDF::loadView('pdfs.attendance-sheet', compact('center', 'students'), [], [
             'title' => "Attendance Sheet - {$center->center_name} - {$center->room_name}",
+            'margin_footer' => 5,
+            'margin_header' => 5,
+            'margin_top' => 30,
         ]);
 
         return $request->input('action') === 'download'
@@ -227,7 +230,7 @@ class PDFController extends Controller
                     $center->student_count = $students->count();
 
                     return $center;
-                })->filter(fn ($c) => $c->student_count > 0)->values();
+                })->filter(fn($c) => $c->student_count > 0)->values();
 
                 return [
                     'center_no' => $group->first()->center_no,
@@ -235,7 +238,7 @@ class PDFController extends Controller
                     'rooms' => $rooms,
                 ];
             })
-            ->filter(fn ($group) => $group['rooms']->count() > 0)
+            ->filter(fn($group) => $group['rooms']->count() > 0)
             ->values();
 
         $filename = "attendance-sheet-all-{$batch->code}.pdf";
@@ -265,7 +268,7 @@ class PDFController extends Controller
             ->with('applicant.profile:id,applicant_id,full_name,photo')
             ->orderBy('roll_number')
             ->get()
-            ->map(fn (Application $app) => $this->assignmentShim($app));
+            ->map(fn(Application $app) => $this->assignmentShim($app));
 
         // Heavy regex backtracking can blow the default limit on large batches.
         ini_set('pcre.backtrack_limit', '50000000');
@@ -294,7 +297,7 @@ class PDFController extends Controller
             ->with('applicant.profile:id,applicant_id,full_name,photo')
             ->orderBy('roll_number')
             ->get()
-            ->map(fn (Application $app) => $this->assignmentShim($app));
+            ->map(fn(Application $app) => $this->assignmentShim($app));
     }
 
     /**
@@ -333,7 +336,7 @@ class PDFController extends Controller
         // Order present-first / permanent-last so the blade's
         // ->first() / ->last() fallbacks land on the right address.
         $addresses = ($applicant?->addresses ?? collect())
-            ->sortBy(fn ($a) => $a->type?->value === 'present' ? 0 : 1)
+            ->sortBy(fn($a) => $a->type?->value === 'present' ? 0 : 1)
             ->values();
 
         $appliedAtRaw = $application->getRawOriginal('applied_at');
