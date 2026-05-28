@@ -13,6 +13,8 @@ class AdmissionSetting extends Model
     protected $casts = [
         'application_number_start_from' => 'integer',
         'roll_number_start_from' => 'integer',
+        'pass_mark' => 'decimal:2',
+        'viva_mcq_threshold' => 'decimal:2',
         'intake_started_at' => DateFormatCast::class,
         'intake_ended_at' => DateFormatCast::class,
         'application_payment_ended_at' => DateFormatCast::class,

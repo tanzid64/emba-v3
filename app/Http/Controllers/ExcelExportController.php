@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ConfirmedApplicantsExport;
 use App\Exports\ExamResultsExport;
+use App\Exports\VivaShortlistExport;
 use App\Models\Batch;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -38,6 +40,36 @@ class ExcelExportController extends Controller
             ),
             $filename,
         );
+    }
+
+    /**
+     * Stream the confirmed (paid) applicants workbook for a batch as an
+     * .xlsx download. Admin-only. Exports the full intaker list in
+     * roll-number order.
+     */
+    public function confirmedApplicants(Request $request, Batch $batch)
+    {
+        $this->ensureAdmin($request);
+
+        $filename = 'confirmed-applicants-'.$batch->code.'-'.now()->format('Ymd-His').'.xlsx';
+
+        return Excel::download(new ConfirmedApplicantsExport($batch), $filename);
+    }
+
+    /**
+     * Stream the viva shortlist workbook for a batch as an .xlsx download.
+     * Admin-only. Exports every candidate whose MCQ mark reaches the
+     * batch's eligibility cutoff.
+     */
+    public function vivaShortlist(Request $request, Batch $batch)
+    {
+        $this->ensureAdmin($request);
+
+        $batch->loadMissing('admissionSetting');
+
+        $filename = 'viva-shortlist-'.$batch->code.'-'.now()->format('Ymd-His').'.xlsx';
+
+        return Excel::download(new VivaShortlistExport($batch), $filename);
     }
 
     private function ensureAdmin(Request $request): void

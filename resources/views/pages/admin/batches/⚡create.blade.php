@@ -34,6 +34,8 @@ class extends Component {
         'application_fee' => 2500,
         'enrollment_fee' => 500,
         'admission_fee' => 12000,
+        'pass_mark' => 40,
+        'viva_mcq_threshold' => 25,
         'application_number_start_from' => 1000,
         'roll_number_start_from' => 1000,
     ];
@@ -70,6 +72,9 @@ class extends Component {
             'settings.enrollment_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'settings.admission_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
 
+            'settings.pass_mark' => ['required', 'numeric', 'min:0', 'max:'.config('result.max_marks')],
+            'settings.viva_mcq_threshold' => ['required', 'numeric', 'min:0', 'max:'.config('result.max_mcq_marks')],
+
             'settings.application_number_start_from' => ['required', 'integer', 'min:1', 'max:2147483647'],
             'settings.roll_number_start_from' => ['required', 'integer', 'min:1', 'max:2147483647'],
 
@@ -87,6 +92,8 @@ class extends Component {
             'settings.application_fee' => __('application fee'),
             'settings.enrollment_fee' => __('enrollment fee'),
             'settings.admission_fee' => __('admission fee'),
+            'settings.pass_mark' => __('pass mark'),
+            'settings.viva_mcq_threshold' => __('viva eligibility MCQ mark'),
             'settings.application_number_start_from' => __('application number start'),
             'settings.roll_number_start_from' => __('roll number start'),
             'notice' => __('notice document'),
@@ -271,6 +278,28 @@ class extends Component {
                     <label class="{{ $labelClasses }}">{{ __('Admission fee') }} <span class="text-red-500">*</span></label>
                     <x-ui.input type="number" step="0.01" min="0" wire:model="settings.admission_fee" />
                     @error('settings.admission_fee') <p class="{{ $errorClasses }}">{{ $message }}</p> @enderror
+                </div>
+            </div>
+        </fieldset>
+
+        {{-- ===================== MARKING & MERIT RULES ===================== --}}
+        <fieldset class="{{ $sectionCard }}">
+            <legend class="{{ $sectionLegend }}">{{ __('Marking & merit rules') }}</legend>
+            <p class="{{ $sectionDescription }}">{{ __('Thresholds used when results are processed. Total exam is out of :max marks.', ['max' => config('result.max_marks')]) }}</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="{{ $labelClasses }}">{{ __('Pass mark') }} <span class="text-red-500">*</span></label>
+                    <x-ui.input type="number" step="0.01" min="0" :max="config('result.max_marks')" wire:model="settings.pass_mark" />
+                    <p class="mt-1.5 text-xs text-zinc-500">{{ __('Minimum total marks (out of :max) required to pass and be merit-listed.', ['max' => config('result.max_marks')]) }}</p>
+                    @error('settings.pass_mark') <p class="{{ $errorClasses }}">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="{{ $labelClasses }}">{{ __('Viva eligibility (MCQ ≥)') }} <span class="text-red-500">*</span></label>
+                    <x-ui.input type="number" step="0.01" min="0" :max="config('result.max_mcq_marks')" wire:model="settings.viva_mcq_threshold" />
+                    <p class="mt-1.5 text-xs text-zinc-500">{{ __('Minimum MCQ marks (out of :max) a candidate needs to be called for viva.', ['max' => config('result.max_mcq_marks')]) }}</p>
+                    @error('settings.viva_mcq_threshold') <p class="{{ $errorClasses }}">{{ $message }}</p> @enderror
                 </div>
             </div>
         </fieldset>

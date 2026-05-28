@@ -117,6 +117,12 @@
                     <flux:sidebar.item icon="identification" :href="route('admin.admit-cards.index')" :current="request()->routeIs('admin.admit-cards.*')" wire:navigate>
                         {{ __('Admit Cards') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="clipboard-document-check" :href="route('admin.viva-shortlist.index')" :current="request()->routeIs('admin.viva-shortlist.*')" wire:navigate>
+                        {{ __('Viva Shortlist') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="users" :href="route('admin.viva-boards.index')" :current="request()->routeIs('admin.viva-boards.*')" wire:navigate>
+                        {{ __('Viva Board') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="trophy" :href="route('admin.exam-results.index')" :current="request()->routeIs('admin.exam-results.*')" wire:navigate>
                         {{ __('Exam Results') }}
                     </flux:sidebar.item>

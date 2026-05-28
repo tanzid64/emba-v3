@@ -217,6 +217,8 @@ new class extends Component {
     {
         return match ($field) {
             'application_fee', 'enrollment_fee', 'admission_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
+            'pass_mark' => ['required', 'numeric', 'min:0', 'max:'.config('result.max_marks')],
+            'viva_mcq_threshold' => ['required', 'numeric', 'min:0', 'max:'.config('result.max_mcq_marks')],
             'application_payment_ended_at' => ['nullable', 'date'],
             'exam_date', 'viva_date' => ['nullable', 'date'],
             'application_number_start_from', 'roll_number_start_from' => ['required', 'integer', 'min:1', 'max:2147483647'],
@@ -260,6 +262,7 @@ new class extends Component {
     {
         return match ($field) {
             'application_fee', 'enrollment_fee', 'admission_fee' => 'number',
+            'pass_mark', 'viva_mcq_threshold' => 'number',
             'application_number_start_from', 'roll_number_start_from' => 'number',
             'exam_date', 'viva_date' => 'datetime-local',
             default => 'date',
@@ -277,6 +280,8 @@ new class extends Component {
             'application_fee' => __('Application Fee'),
             'enrollment_fee' => __('Enrollment Fee'),
             'admission_fee' => __('Admission Fee'),
+            'pass_mark' => __('Pass Mark'),
+            'viva_mcq_threshold' => __('Viva Eligibility (MCQ ≥)'),
             'admit_card_published_at' => __('Admit Card Published'),
             'exam_center_uploaded_at' => __('Exam Center Uploaded'),
             'result_published_at' => __('Result Published At'),
@@ -294,6 +299,8 @@ new class extends Component {
             'application_fee' => __('Amount each applicant pays to submit their application. Changing this only affects payments made from now on — applicants who already paid are not re-billed.'),
             'enrollment_fee' => __('Amount paid after a candidate is shortlisted to confirm their seat. Does not retroactively change existing enrollment records.'),
             'admission_fee' => __('Final tuition / admission charge billed once enrollment is finalised. Used when generating admission invoices for selected candidates.'),
+            'pass_mark' => __('Minimum total marks (out of :max) a candidate must score to pass and be included in the merit list. Applied the next time the merit list is generated.', ['max' => config('result.max_marks')]),
+            'viva_mcq_threshold' => __('Minimum MCQ marks (out of :max) a candidate must score to be eligible to sit for the viva.', ['max' => config('result.max_mcq_marks')]),
             'exam_date' => __('Scheduled written exam time. Shown on the admit card and on the applicant portal as soon as it is saved.'),
             'viva_date' => __('Scheduled viva voce / interview time. Visible to short-listed applicants after the written exam result is published.'),
             'application_number_start_from' => __('Starting integer for application numbers in this batch. Cannot be lowered below the highest number already issued.'),
@@ -333,6 +340,17 @@ new class extends Component {
             }
 
             return 'Tk '.number_format((float) $raw, ((float) $raw == (int) $raw) ? 0 : 2);
+        }
+
+        // Mark thresholds — plain numbers, trailing .00 trimmed.
+        if (in_array($field, ['pass_mark', 'viva_mcq_threshold'], true)) {
+            $raw = $this->settings->getRawOriginal($field);
+
+            if ($raw === null) {
+                return '';
+            }
+
+            return number_format((float) $raw, ((float) $raw == (int) $raw) ? 0 : 2);
         }
 
         // Date-only fields — strip the time portion from the cast output.
@@ -401,6 +419,8 @@ new class extends Component {
             ['key' => 'application_payment_ended_at', 'kind' => 'date'],
             ['key' => 'enrollment_fee', 'kind' => 'money'],
             ['key' => 'admission_fee', 'kind' => 'money'],
+            ['key' => 'pass_mark', 'kind' => 'mark'],
+            ['key' => 'viva_mcq_threshold', 'kind' => 'mark'],
             ['key' => 'application_number_start_from', 'kind' => 'integer'],
             ['key' => 'roll_number_start_from', 'kind' => 'integer'],
             ['key' => 'exam_date', 'kind' => 'datetime'],

@@ -146,9 +146,9 @@ class PDFController extends Controller
 
         $base = AdmissionResult::query()
             ->where('batch_id', $batch->id)
-            ->when($status, fn($q) => $q->where('status', $status))
-            ->when($meritFrom !== null, fn($q) => $q->where('merit_position', '>=', $meritFrom))
-            ->when($meritTo !== null, fn($q) => $q->where('merit_position', '<=', $meritTo));
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($meritFrom !== null, fn ($q) => $q->where('merit_position', '>=', $meritFrom))
+            ->when($meritTo !== null, fn ($q) => $q->where('merit_position', '<=', $meritTo));
 
         $totalCount = (clone $base)->count();
         $passedCount = (clone $base)->where('status', ResultStatusEnum::PASSED->value)->count();
@@ -160,7 +160,7 @@ class PDFController extends Controller
             ->orderByDesc('total_marks')
             ->get();
 
-        $filename = 'exam-results-' . $batch->code . '-' . now()->format('Ymd-His') . '.pdf';
+        $filename = 'exam-results-'.$batch->code.'-'.now()->format('Ymd-His').'.pdf';
 
         $pdf = PDF::loadView('pdfs.exam-results', [
             'batch' => $batch,
@@ -178,7 +178,84 @@ class PDFController extends Controller
         ]);
 
         return response()->streamDownload(
-            fn() => print($pdf->output()),
+            fn () => print ($pdf->output()),
+            $filename,
+            ['Content-Type' => 'application/pdf'],
+        );
+    }
+
+    /**
+     * Stream the confirmed (paid) applicants report for a batch as a PDF
+     * download. Admin-only. Mirrors the Confirmed Applicants Excel export.
+     */
+    public function generateConfirmedApplicantsPDF(Request $request, Batch $batch)
+    {
+        $this->ensureAdmin($request);
+
+        $applications = Application::query()
+            ->where('batch_id', $batch->id)
+            ->whereIn('payment_status', [PaymentStatusEnum::PAID->value, PaymentStatusEnum::COMPLETED->value])
+            ->whereNotNull('roll_number')
+            ->with(['applicant:id,email,phone_number', 'applicant.profile:id,applicant_id,full_name,father_name,mother_name'])
+            ->orderBy('roll_number')
+            ->get();
+
+        $filename = 'confirmed-applicants-'.$batch->code.'-'.now()->format('Ymd-His').'.pdf';
+
+        $pdf = PDF::loadView('pdfs.confirmed-applicants', [
+            'batch' => $batch,
+            'applications' => $applications,
+            'totalCount' => $applications->count(),
+        ], [], [
+            'orientation' => 'L',
+            'format' => 'A4',
+            'title' => "Confirmed Applicants - {$batch->code}",
+        ]);
+
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
+            $filename,
+            ['Content-Type' => 'application/pdf'],
+        );
+    }
+
+    /**
+     * Stream the viva shortlist report for a batch as a PDF download.
+     * Admin-only. Lists every candidate whose MCQ mark reaches the batch's
+     * eligibility cutoff, mirroring the Viva Shortlist Excel export.
+     */
+    public function generateVivaShortlistPDF(Request $request, Batch $batch)
+    {
+        $this->ensureAdmin($request);
+
+        $batch->loadMissing('admissionSetting');
+
+        $threshold = (float) ($batch->admissionSetting?->viva_mcq_threshold
+            ?? config('result.viva_mcq_threshold'));
+
+        $results = AdmissionResult::query()
+            ->where('batch_id', $batch->id)
+            ->where('mcq_marks', '>=', $threshold)
+            ->with(['applicant.profile:id,applicant_id,full_name,father_name'])
+            ->orderByDesc('mcq_marks')
+            ->orderByDesc('total_marks')
+            ->get();
+
+        $filename = 'viva-shortlist-'.$batch->code.'-'.now()->format('Ymd-His').'.pdf';
+
+        $pdf = PDF::loadView('pdfs.viva-shortlist', [
+            'batch' => $batch,
+            'results' => $results,
+            'eligibleCount' => $results->count(),
+            'threshold' => $threshold,
+        ], [], [
+            'orientation' => 'P',
+            'format' => 'A4',
+            'title' => "Viva Shortlist - {$batch->code}",
+        ]);
+
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
             $filename,
             ['Content-Type' => 'application/pdf'],
         );
@@ -230,7 +307,7 @@ class PDFController extends Controller
                     $center->student_count = $students->count();
 
                     return $center;
-                })->filter(fn($c) => $c->student_count > 0)->values();
+                })->filter(fn ($c) => $c->student_count > 0)->values();
 
                 return [
                     'center_no' => $group->first()->center_no,
@@ -238,7 +315,7 @@ class PDFController extends Controller
                     'rooms' => $rooms,
                 ];
             })
-            ->filter(fn($group) => $group['rooms']->count() > 0)
+            ->filter(fn ($group) => $group['rooms']->count() > 0)
             ->values();
 
         $filename = "attendance-sheet-all-{$batch->code}.pdf";
@@ -268,7 +345,7 @@ class PDFController extends Controller
             ->with('applicant.profile:id,applicant_id,full_name,photo')
             ->orderBy('roll_number')
             ->get()
-            ->map(fn(Application $app) => $this->assignmentShim($app));
+            ->map(fn (Application $app) => $this->assignmentShim($app));
 
         // Heavy regex backtracking can blow the default limit on large batches.
         ini_set('pcre.backtrack_limit', '50000000');
@@ -297,7 +374,7 @@ class PDFController extends Controller
             ->with('applicant.profile:id,applicant_id,full_name,photo')
             ->orderBy('roll_number')
             ->get()
-            ->map(fn(Application $app) => $this->assignmentShim($app));
+            ->map(fn (Application $app) => $this->assignmentShim($app));
     }
 
     /**
@@ -336,7 +413,7 @@ class PDFController extends Controller
         // Order present-first / permanent-last so the blade's
         // ->first() / ->last() fallbacks land on the right address.
         $addresses = ($applicant?->addresses ?? collect())
-            ->sortBy(fn($a) => $a->type?->value === 'present' ? 0 : 1)
+            ->sortBy(fn ($a) => $a->type?->value === 'present' ? 0 : 1)
             ->values();
 
         $appliedAtRaw = $application->getRawOriginal('applied_at');

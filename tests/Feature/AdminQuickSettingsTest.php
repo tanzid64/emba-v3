@@ -39,6 +39,34 @@ it('persists a new application_number_start_from when above current max', functi
     expect($this->batch->fresh()->admissionSetting->application_number_start_from)->toBe(2500);
 });
 
+it('persists an updated pass_mark', function () {
+    Livewire::test('pages::admin.quick-settings')
+        ->call('startEdit', 'pass_mark')
+        ->set('fieldValue', 55)
+        ->call('saveField');
+
+    expect((float) $this->batch->fresh()->admissionSetting->pass_mark)->toBe(55.0);
+});
+
+it('rejects a pass_mark above the maximum total marks', function () {
+    Livewire::test('pages::admin.quick-settings')
+        ->call('startEdit', 'pass_mark')
+        ->set('fieldValue', config('result.max_marks') + 1)
+        ->call('saveField')
+        ->assertHasErrors(['fieldValue']);
+
+    expect((float) $this->batch->fresh()->admissionSetting->pass_mark)->toBe(40.0);
+});
+
+it('persists an updated viva_mcq_threshold', function () {
+    Livewire::test('pages::admin.quick-settings')
+        ->call('startEdit', 'viva_mcq_threshold')
+        ->set('fieldValue', 30)
+        ->call('saveField');
+
+    expect((float) $this->batch->fresh()->admissionSetting->viva_mcq_threshold)->toBe(30.0);
+});
+
 it('rejects an application_number_start_from below the current max', function () {
     $applicant = Applicant::factory()->create(['batch_id' => $this->batch->id]);
     Application::create([

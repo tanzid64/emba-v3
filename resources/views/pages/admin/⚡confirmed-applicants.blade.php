@@ -94,9 +94,17 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
             </p>
         </div>
         @if ($batch && $applications)
-            <x-ui.badge size="sm" color="green">
-                {{ trans_choice(':count confirmed|:count confirmed', $applications->total(), ['count' => number_format($applications->total())]) }}
-            </x-ui.badge>
+            <div class="flex items-center gap-2 flex-wrap">
+                <x-ui.badge size="sm" color="green">
+                    {{ trans_choice(':count confirmed|:count confirmed', $applications->total(), ['count' => number_format($applications->total())]) }}
+                </x-ui.badge>
+                @if ($applications->total() > 0)
+                    <x-ui.button variant="outline" icon="download"
+                        x-on:click="$dispatch('open-modal', { name: 'export-confirmed-applicants' })">
+                        {{ __('Export') }}
+                    </x-ui.button>
+                @endif
+            </div>
         @endif
     </div>
 
@@ -246,4 +254,36 @@ new #[Title('Confirmed Applications')] #[Layout('layouts.app')] class extends Co
             @endforelse
         </x-ui.table>
     @endif
+
+    {{-- ===================== EXPORT MODAL ===================== --}}
+    <x-ui.modal name="export-confirmed-applicants" :title="__('Export Confirmed Applicants')" maxWidth="lg">
+        @if ($batch)
+            <div class="space-y-4">
+                <div class="rounded-lg border border-brand/15 bg-brand-soft px-4 py-3 text-xs text-zinc-700 flex items-start gap-2">
+                    <x-lucide-info class="size-4 shrink-0 text-brand mt-0.5" />
+                    <p class="leading-relaxed">
+                        {{ __('Exports the full confirmed (paid) applicant list for this batch in roll-number order, with a professional header (batch, timestamp, totals).') }}
+                    </p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <x-ui.button variant="outline" icon="file-text" class="flex-1"
+                        :href="route('pdf.confirmed-applicants', $batch)">
+                        {{ __('Download PDF') }}
+                    </x-ui.button>
+                    <x-ui.button variant="primary" icon="file-spreadsheet" class="flex-1"
+                        :href="route('excel.confirmed-applicants', $batch)">
+                        {{ __('Download Excel') }}
+                    </x-ui.button>
+                </div>
+            </div>
+
+            <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+                <x-ui.button variant="ghost"
+                    x-on:click="$dispatch('close-modal', { name: 'export-confirmed-applicants' })">
+                    {{ __('Close') }}
+                </x-ui.button>
+            </div>
+        @endif
+    </x-ui.modal>
 </div>

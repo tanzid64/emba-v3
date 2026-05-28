@@ -19,6 +19,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('confirmed-applicants', 'pages::admin.confirmed-applicants')->name('confirmed-applicants.index');
         Route::livewire('exam-centers', 'pages::admin.exam-centers')->name('exam-centers.index');
         Route::livewire('admit-cards', 'pages::admin.admit-cards')->name('admit-cards.index');
+        Route::livewire('viva-shortlist', 'pages::admin.viva-shortlist')->name('viva-shortlist.index');
+        Route::livewire('viva-boards', 'pages::admin.viva-boards')->name('viva-boards.index');
         Route::livewire('exam-results', 'pages::admin.exam-results')->name('exam-results.index');
         Route::livewire('applicants/{application}', 'pages::admin.applicant-show')->name('applicants.show');
         Route::livewire('applicants/{application}/edit', 'pages::admin.applicant-edit')->name('applicants.edit');
@@ -52,6 +54,10 @@ Route::group([
 // Admin-only batch/room reporting PDFs (attendance sheets, seat labels).
 // The controller methods enforce admin-only access via ensureAdmin().
 Route::middleware('auth')->prefix('pdf')->name('pdf.')->group(function () {
+    Route::get('confirmed-applicants/{batch}', [PDFController::class, 'generateConfirmedApplicantsPDF'])
+        ->name('confirmed-applicants');
+    Route::get('viva-shortlist/{batch}', [PDFController::class, 'generateVivaShortlistPDF'])
+        ->name('viva-shortlist');
     Route::get('attendance-sheet/{centerId}', [PDFController::class, 'generateAttendanceSheet'])
         ->name('attendance-sheet')
         ->whereNumber('centerId');
@@ -69,6 +75,10 @@ Route::middleware('auth')->prefix('pdf')->name('pdf.')->group(function () {
 Route::middleware('auth')->prefix('excel')->name('excel.')->group(function () {
     Route::get('exam-results/{batch}', [ExcelExportController::class, 'examResults'])
         ->name('exam-results');
+    Route::get('confirmed-applicants/{batch}', [ExcelExportController::class, 'confirmedApplicants'])
+        ->name('confirmed-applicants');
+    Route::get('viva-shortlist/{batch}', [ExcelExportController::class, 'vivaShortlist'])
+        ->name('viva-shortlist');
 });
 
 // Public, signed verification pages reached via the QR codes on the

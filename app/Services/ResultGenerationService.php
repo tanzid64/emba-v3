@@ -80,10 +80,12 @@ class ResultGenerationService
      * into `merit_position` (1 = top). Returns the number of rows
      * ranked (PASSED only).
      *
-     * Pass/fail is decided from `total_marks` against the bounds in
-     * `config/result.php`:
+     * Pass/fail is decided from `total_marks` against the batch's
+     * configured pass mark (admission_settings.pass_mark, falling back
+     * to config('result.passing_marks') when the batch has no settings
+     * row) and the structural ceiling config('result.max_marks'):
      *
-     *   PASSED  → passing_marks ≤ total_marks ≤ max_marks
+     *   PASSED  → pass_mark ≤ total_marks ≤ max_marks
      *   FAILED  → anything else (out of range, or below the cutoff)
      *
      * Only PASSED rows receive a `merit_position`; FAILED rows have
@@ -110,8 +112,10 @@ class ResultGenerationService
      */
     public function generateMeritList(Batch $batch): int
     {
-        $passingMarks = (int) config('result.passing_marks');
-        $maxMarks = (int) config('result.max_marks');
+        $batch->loadMissing('admissionSetting');
+
+        $passingMarks = (float) ($batch->admissionSetting?->pass_mark ?? config('result.passing_marks'));
+        $maxMarks = (float) config('result.max_marks');
 
         $results = AdmissionResult::where('batch_id', $batch->id)
             ->orderByDesc('total_marks')

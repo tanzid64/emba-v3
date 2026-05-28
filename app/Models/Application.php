@@ -52,6 +52,11 @@ class Application extends Model
         return $this->belongsTo(ExamCenter::class);
     }
 
+    public function vivaBoard(): BelongsTo
+    {
+        return $this->belongsTo(VivaBoard::class);
+    }
+
     /**
      * Find or create a draft application for the given applicant + current batch.
      * Drafts have no application_number — one is assigned on submit().

@@ -6,6 +6,7 @@ use App\Enums\DegreeType;
 use App\Enums\PaymentStatusEnum;
 use App\Enums\ResultStatusEnum;
 use App\Models\AdmissionResult;
+use App\Models\AdmissionSetting;
 use App\Models\Applicant;
 use App\Models\ApplicantProfile;
 use App\Models\Application;
@@ -330,6 +331,46 @@ it('skips merit ranking for candidates below the passing mark', function () {
 
     expect($failedZero->fresh()->merit_position)->toBeNull();
     expect($failedZero->fresh()->status)->toBe(ResultStatusEnum::FAILED);
+});
+
+it('uses the batch admission setting pass mark over the config fallback', function () {
+    $batch = Batch::create([
+        'name' => 'PassMark T', 'code' => 'PM-'.uniqid(),
+        'admission_year' => 2026, 'status' => BatchStatusEnum::OPEN,
+    ]);
+
+    AdmissionSetting::create([
+        'batch_id' => $batch->id,
+        'pass_mark' => 50,
+    ]);
+
+    // 45 clears the config default (40) but falls short of this batch's 50.
+    $below = seedResult($batch->id, 1, ['total_marks' => 45]);
+    $atCutoff = seedResult($batch->id, 2, ['total_marks' => 50]);
+    $above = seedResult($batch->id, 3, ['total_marks' => 60]);
+
+    $ranked = app(ResultGenerationService::class)->generateMeritList($batch);
+
+    expect($ranked)->toBe(2);
+    expect($above->fresh()->merit_position)->toBe(1);
+    expect($atCutoff->fresh()->merit_position)->toBe(2);
+    expect($below->fresh()->merit_position)->toBeNull();
+    expect($below->fresh()->status)->toBe(ResultStatusEnum::FAILED);
+});
+
+it('falls back to the config pass mark when the batch has no admission setting', function () {
+    $batch = Batch::create([
+        'name' => 'NoSetting T', 'code' => 'NS-'.uniqid(),
+        'admission_year' => 2026, 'status' => BatchStatusEnum::OPEN,
+    ]);
+
+    // 45 ≥ config('result.passing_marks') (40), so it passes without a per-batch override.
+    $candidate = seedResult($batch->id, 1, ['total_marks' => 45]);
+
+    app(ResultGenerationService::class)->generateMeritList($batch);
+
+    expect($candidate->fresh()->status)->toBe(ResultStatusEnum::PASSED);
+    expect($candidate->fresh()->merit_position)->toBe(1);
 });
 
 it('clears a previously-assigned merit_position when marks drop below the cutoff', function () {

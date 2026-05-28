@@ -44,4 +44,9 @@ class Batch extends Model
     {
         return $this->hasOne(AdmissionSetting::class);
     }
+
+    public function vivaBoards(): HasMany
+    {
+        return $this->hasMany(VivaBoard::class);
+    }
 }
