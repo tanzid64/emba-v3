@@ -9,6 +9,31 @@ test('login screen can be rendered', function () {
     $response->assertOk();
 });
 
+test('login screen renders a submittable remember-me checkbox', function () {
+    // Flux's <ui-checkbox> custom element is not form-associated, so on a
+    // plain POST form the remember field must be a native <input> to reach
+    // Fortify. Guards against regressing back to a non-submitting control.
+    $html = (string) $this->get(route('login'))->getContent();
+
+    expect($html)->toMatch('/<input(?=[^>]*type="checkbox")(?=[^>]*name="remember")[^>]*>/i');
+});
+
+test('checking remember me issues the long-lived remember cookie', function () {
+    $user = User::factory()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+        'remember' => '1',
+    ]);
+
+    $response->assertRedirect(route('dashboard', absolute: false));
+    $this->assertAuthenticated();
+
+    $cookieNames = collect($response->headers->getCookies())->map->getName();
+    expect($cookieNames->contains(fn ($name) => str_starts_with($name, 'remember_web_')))->toBeTrue();
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 

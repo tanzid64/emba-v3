@@ -5,8 +5,6 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
-        <x-passkey-verify />
-
         <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-6">
             @csrf
 
@@ -42,7 +40,13 @@
             </div>
 
             <!-- Remember Me -->
-            <flux:checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
+            {{-- A native input is required here: this is a plain POST form, and Flux's
+                 <ui-checkbox> is not form-associated, so its value never reaches Fortify. --}}
+            <label class="flex items-center gap-2 text-sm select-none text-zinc-600 dark:text-zinc-300">
+                <input type="checkbox" name="remember" value="1" @checked(old('remember'))
+                    class="size-4 rounded border-zinc-300 accent-brand dark:border-zinc-600 dark:bg-zinc-700" />
+                {{ __('Remember me') }}
+            </label>
 
             <div class="flex items-center justify-end">
                 <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
