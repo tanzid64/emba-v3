@@ -2,6 +2,7 @@
 
 use App\Models\Batch;
 use App\Models\VivaBoard;
+use App\Services\VivaBoardAssignmentService;
 use App\Support\CurrentBatch;
 use App\Support\Toast;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,36 @@ new #[Title('Viva Board')] #[Layout('layouts.app')] class extends Component {
     public function mount(): void
     {
         $this->batch = CurrentBatch::get();
+    }
+
+    /**
+     * Spread the batch's viva-eligible candidates across its boards,
+     * leaving anyone already assigned in place (see
+     * VivaBoardAssignmentService).
+     */
+    public function assignBoards(VivaBoardAssignmentService $service): void
+    {
+        if (! $this->batch) {
+            return;
+        }
+
+        if (VivaBoard::where('batch_id', $this->batch->id)->doesntExist()) {
+            Toast::warning(__('Add at least one board before assigning candidates.'));
+
+            return;
+        }
+
+        $assigned = $service->assignUnassigned($this->batch);
+
+        if ($assigned === 0) {
+            Toast::info(__('No new candidates to assign — every eligible candidate already has a board.'));
+
+            return;
+        }
+
+        Toast::success(__(':count candidate(s) assigned across the boards.', [
+            'count' => number_format($assigned),
+        ]));
     }
 
     public function openCreateModal(): void
@@ -168,9 +199,20 @@ new #[Title('Viva Board')] #[Layout('layouts.app')] class extends Component {
             </p>
         </div>
         @if ($batch)
-            <x-ui.button variant="primary" icon="plus" wire:click="openCreateModal">
-                {{ __('Add Board') }}
-            </x-ui.button>
+            <div class="flex items-center gap-2">
+                @if ($boards->isNotEmpty())
+                    <x-ui.button variant="outline" wire:click="assignBoards"
+                        wire:loading.attr="disabled" wire:target="assignBoards">
+                        <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="assignBoards" />
+                        <x-lucide-clipboard-check wire:loading.remove wire:target="assignBoards" />
+                        <span wire:loading.remove wire:target="assignBoards">{{ __('Assign Board') }}</span>
+                        <span wire:loading wire:target="assignBoards">{{ __('Assigning…') }}</span>
+                    </x-ui.button>
+                @endif
+                <x-ui.button variant="primary" icon="plus" wire:click="openCreateModal">
+                    {{ __('Add Board') }}
+                </x-ui.button>
+            </div>
         @endif
     </div>
 
