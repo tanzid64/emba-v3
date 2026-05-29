@@ -2,14 +2,10 @@
 
 namespace App\Services;
 
-use App\Enums\DegreeType;
 use App\Enums\ResultStatusEnum;
 use App\Models\AdmissionResult;
-use App\Models\ApplicantProfile;
 use App\Models\Application;
 use App\Models\Batch;
-use App\Models\EducationHistory;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -37,6 +33,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ResultGenerationService
 {
+    public function __construct(private AdmissionMarkCalculator $calculator) {}
+
     /**
      * Snapshot the initial AdmissionResult for a freshly-paid application.
      *
@@ -51,8 +49,12 @@ class ResultGenerationService
         $profile = $application->applicant?->profile;
         $histories = $application->applicant?->educationHistories ?? collect();
 
-        $schoolingMarks = $this->calculateSchoolingMarks($profile, $histories);
-        $experienceMarks = $this->calculateExperienceMarks($profile);
+        $schoolingMarks = $profile
+            ? $this->calculator->schoolingMarks((int) $profile->tot_year_of_schooling, $this->calculator->highestDegree($histories))
+            : 0.0;
+        $experienceMarks = $profile
+            ? $this->calculator->experienceMarks((float) $profile->tot_year_of_exp)
+            : 0.0;
         $totalMarks = $schoolingMarks + $experienceMarks;
 
         return AdmissionResult::updateOrCreate(
@@ -152,109 +154,5 @@ class ResultGenerationService
         });
 
         return $rankedCount;
-    }
-
-    /**
-     * Years-to-marks lookup for the academic dimension. Reads the
-     * applicant's tot_year_of_schooling (decimal years, truncated to
-     * whole years here) and pairs it with the highest degree on file
-     * to find a marks value in the fixed matrix:
-     *
-     *   14 yr Bachelor       →  2
-     *   15 yr Bachelor       →  3
-     *   16 yr Bachelor       →  4
-     *   16 yr B.Sc Eng       →  5
-     *   16 yr Master         →  4
-     *   17 yr Master         →  5
-     *   17 yr M.Sc Eng       →  5  (same row as 17yr Master)
-     *
-     * Combinations outside the matrix award 0. The final value is
-     * capped at config('result.max_schooling_marks') as a defensive
-     * upper bound.
-     *
-     * Engineering vs non-engineering is detected by looking at the
-     * highest degree's `major` / `name` text — the schema does not
-     * distinguish engineering at the enum level.
-     *
-     * @param  Collection<int, EducationHistory>  $histories
-     */
-    private function calculateSchoolingMarks(?ApplicantProfile $profile, Collection $histories): float
-    {
-        if (! $profile) {
-            return 0.0;
-        }
-
-        $years = (int) $profile->tot_year_of_schooling;
-        $highest = $this->highestDegree($histories);
-
-        if (! $highest) {
-            return 0.0;
-        }
-
-        $type = $highest->type;
-        $isEngineering = $this->isEngineeringDegree($highest);
-
-        $marks = match (true) {
-            $years === 14 && $type === DegreeType::UNDERGRADUATE => 2,
-            $years === 15 && $type === DegreeType::UNDERGRADUATE => 3,
-            $years === 16 && $type === DegreeType::UNDERGRADUATE && $isEngineering => 5,
-            $years === 16 && $type === DegreeType::UNDERGRADUATE => 4,
-            $years === 16 && $type === DegreeType::GRADUATE => 4,
-            $years === 17 && $type === DegreeType::GRADUATE => 5,
-            default => 0,
-        };
-
-        return (float) min($marks, (int) config('result.max_schooling_marks'));
-    }
-
-    /**
-     * Years-to-marks lookup for the experience dimension.
-     *
-     * Rule: the first two years of experience count as zero, then
-     * every additional whole year adds one point. The maximum is
-     * config('result.max_experience_marks') (10 by default), reached
-     * at 12 years (2 ignored + 10 counted). Any experience beyond
-     * 12 years adds no further points.
-     *
-     * Partial years are truncated downward — a 2.9-year applicant
-     * gets 0, a 12.9-year applicant gets 10.
-     */
-    private function calculateExperienceMarks(?ApplicantProfile $profile): float
-    {
-        if (! $profile) {
-            return 0.0;
-        }
-
-        $years = (int) floor((float) $profile->tot_year_of_exp);
-        $effective = max(0, $years - 2);
-        $cap = (int) config('result.max_experience_marks');
-
-        return (float) min($effective, $cap);
-    }
-
-    /**
-     * Pick the highest-level degree on file. Graduate (Master)
-     * outranks Undergraduate (Bachelor); SSC / HSC / Other are
-     * ignored because the schooling matrix only awards points for
-     * Bachelor and Master entries.
-     *
-     * @param  Collection<int, EducationHistory>  $histories
-     */
-    private function highestDegree(Collection $histories): ?EducationHistory
-    {
-        return $histories->firstWhere('type', DegreeType::GRADUATE)
-            ?? $histories->firstWhere('type', DegreeType::UNDERGRADUATE);
-    }
-
-    /**
-     * Engineering check searches the degree's `major` and `name`
-     * strings for the word "engineering" (case-insensitive). Used
-     * to award the +1 bonus at the 16-year Bachelor row.
-     */
-    private function isEngineeringDegree(EducationHistory $degree): bool
-    {
-        $haystack = strtolower(($degree->major ?? '').' '.($degree->name ?? ''));
-
-        return str_contains($haystack, 'engineering');
     }
 }

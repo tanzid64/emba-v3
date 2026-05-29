@@ -7,6 +7,7 @@ use App\Models\AdmissionResult;
 use App\Models\Batch;
 use App\Services\ExamMarksUploadService;
 use App\Services\ResultGenerationService;
+use App\Services\VivaMarksUploadService;
 use App\Support\CurrentBatch;
 use App\Support\Toast;
 use Livewire\Attributes\Layout;
@@ -34,6 +35,9 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
 
     // Marks CSV — wired up in the upload modal.
     public $csv = null;
+
+    // Viva marks CSV — wired up in the viva upload modal.
+    public $vivaCsv = null;
 
     // Export filters — wired up in the export modal.
     public string $exportStatusFilter = '';
@@ -142,6 +146,61 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
 
         Toast::success(__('Marks imported — :updated row(s) updated · merit list regenerated (:ranked ranked).', [
             'updated' => $result['updated'],
+            'ranked' => number_format($ranked),
+        ]));
+    }
+
+    public function openVivaUploadModal(): void
+    {
+        $this->resetErrorBag();
+        $this->vivaCsv = null;
+        $this->dispatch('open-modal', name: 'upload-viva-marks');
+    }
+
+    public function closeVivaUploadModal(): void
+    {
+        $this->resetErrorBag();
+        $this->vivaCsv = null;
+        $this->dispatch('close-modal', name: 'upload-viva-marks');
+    }
+
+    public function uploadVivaMarks(VivaMarksUploadService $service, ResultGenerationService $meritService): void
+    {
+        if (! $this->batch) {
+            return;
+        }
+
+        $this->validate([
+            'vivaCsv' => ['required', 'file', 'mimes:csv,txt', 'max:1024'],
+        ], attributes: [
+            'vivaCsv' => __('CSV file'),
+        ]);
+
+        if (! $this->vivaCsv instanceof TemporaryUploadedFile) {
+            $this->addError('vivaCsv', __('Please choose a CSV file to upload.'));
+
+            return;
+        }
+
+        try {
+            $result = $service->import($this->batch, $this->vivaCsv->getRealPath());
+        } catch (\Throwable $e) {
+            $this->addError('vivaCsv', $e->getMessage());
+
+            return;
+        }
+
+        // Viva / re-verified schooling / experience change total_marks, so
+        // re-rank immediately.
+        $ranked = $meritService->generateMeritList($this->batch);
+
+        $this->vivaCsv = null;
+        $this->dispatch('close-modal', name: 'upload-viva-marks');
+        $this->resetPage();
+
+        Toast::success(__('Viva marks imported — :updated row(s) updated (:adjusted adjusted) · merit list regenerated (:ranked ranked).', [
+            'updated' => $result['updated'],
+            'adjusted' => $result['adjusted'],
             'ranked' => number_format($ranked),
         ]));
     }
@@ -277,6 +336,9 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
             <div class="flex items-center gap-2 flex-wrap">
                 <x-ui.button variant="outline" icon="upload" wire:click="openUploadModal">
                     {{ __('Upload Marks') }}
+                </x-ui.button>
+                <x-ui.button variant="outline" icon="clipboard-pen" wire:click="openVivaUploadModal">
+                    {{ __('Upload Viva Marks') }}
                 </x-ui.button>
                 <x-ui.button variant="outline" icon="download" wire:click="openExportModal">
                     {{ __('Export') }}
@@ -471,6 +533,74 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
                     <x-lucide-check wire:loading.remove wire:target="uploadMarks" />
                     <span wire:loading.remove wire:target="uploadMarks">{{ __('Import marks') }}</span>
                     <span wire:loading wire:target="uploadMarks">{{ __('Importing…') }}</span>
+                </x-ui.button>
+            </div>
+        @endif
+    </x-ui.modal>
+
+    {{-- ===================== UPLOAD VIVA MARKS MODAL ===================== --}}
+    <x-ui.modal name="upload-viva-marks" :title="__('Upload Viva Marks')" maxWidth="lg">
+        @if ($batch)
+            <div class="space-y-4">
+                {{-- Format info --}}
+                <div class="rounded-lg border border-brand/15 bg-brand-soft px-4 py-3 text-xs text-zinc-700 flex items-start gap-2">
+                    <x-lucide-info class="size-4 shrink-0 text-brand mt-0.5" />
+                    <p class="leading-relaxed">
+                        {{ __('Expected columns:') }}
+                        <code class="font-mono text-zinc-900">roll_number, viva, schooling_years, experience_years</code>.
+                        {{ __('Rows are matched by roll number. Viva is out of :viva. The schooling and experience years are re-converted to marks (schooling uses the candidate\'s highest degree on file). If a recomputed schooling or experience mark differs from the stored one, the uploaded value wins and the row is flagged as adjusted. Leave a cell blank to keep that component unchanged. The merit list is regenerated automatically.', ['viva' => config('result.max_viva_marks')]) }}
+                        <a href="{{ asset('sample_csv/viva_marks_sample.csv') }}" download
+                            class="block mt-1 font-semibold text-brand hover:text-brand-dark">
+                            <x-lucide-download class="inline size-3.5 mr-1" />{{ __('Download sample CSV') }}
+                        </a>
+                    </p>
+                </div>
+
+                {{-- File picker --}}
+                <div>
+                    <label for="viva-csv-upload"
+                        class="flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 hover:bg-zinc-100 cursor-pointer transition-colors"
+                        wire:loading.class="opacity-60" wire:target="vivaCsv">
+                        <x-lucide-upload class="size-5 text-zinc-500" wire:loading.remove wire:target="vivaCsv" />
+                        <x-lucide-loader-2 class="size-5 text-zinc-500 animate-spin" wire:loading wire:target="vivaCsv" />
+                        <span class="text-sm font-semibold text-zinc-700">
+                            <span wire:loading.remove wire:target="vivaCsv">
+                                {{ $vivaCsv ? __('Choose a different CSV file') : __('Click to select a CSV file') }}
+                            </span>
+                            <span wire:loading wire:target="vivaCsv">{{ __('Uploading…') }}</span>
+                        </span>
+                        <span class="text-xs text-zinc-500">{{ __('CSV up to 1 MB') }}</span>
+                    </label>
+                    <input id="viva-csv-upload" type="file" class="sr-only" accept=".csv,text/csv" wire:model="vivaCsv" />
+
+                    @if ($vivaCsv instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                        <div class="mt-2 rounded-lg border border-brand/20 bg-brand-soft px-3 py-2 flex items-center gap-2">
+                            <x-lucide-file-check-2 class="size-4 text-brand shrink-0" />
+                            <span class="flex-1 text-xs font-medium text-zinc-800 truncate">{{ $vivaCsv->getClientOriginalName() }}</span>
+                            <span class="text-xs text-zinc-500">{{ number_format($vivaCsv->getSize() / 1024, 1) }} KB</span>
+                            <button type="button" wire:click="$set('vivaCsv', null)"
+                                class="text-xs font-semibold text-red-600 hover:text-red-700">
+                                {{ __('Remove') }}
+                            </button>
+                        </div>
+                    @endif
+
+                    @error('vivaCsv')
+                        <p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+                <x-ui.button variant="ghost" wire:click="closeVivaUploadModal">
+                    {{ __('Cancel') }}
+                </x-ui.button>
+                <x-ui.button variant="primary" wire:click="uploadVivaMarks" wire:loading.attr="disabled"
+                    wire:target="uploadVivaMarks,vivaCsv">
+                    <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="uploadVivaMarks" />
+                    <x-lucide-check wire:loading.remove wire:target="uploadVivaMarks" />
+                    <span wire:loading.remove wire:target="uploadVivaMarks">{{ __('Import viva marks') }}</span>
+                    <span wire:loading wire:target="uploadVivaMarks">{{ __('Importing…') }}</span>
                 </x-ui.button>
             </div>
         @endif
