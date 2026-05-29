@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ResultStatusEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class AdmissionResult extends Model
 {
@@ -30,5 +31,14 @@ class AdmissionResult extends Model
     public function applicant(): BelongsTo
     {
         return $this->belongsTo(Applicant::class);
+    }
+
+    /**
+     * The applicant's application. Matched on applicant_id only, so callers
+     * must scope by batch_id (an applicant has one application per batch).
+     */
+    public function application(): HasOne
+    {
+        return $this->hasOne(Application::class, 'applicant_id', 'applicant_id');
     }
 }

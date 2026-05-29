@@ -73,7 +73,12 @@ new #[Title('Viva Shortlist')] #[Layout('layouts.app')] class extends Component 
         $eligibleCount = (clone $base)->count();
 
         $results = $base
-            ->with(['applicant.profile:id,applicant_id,full_name'])
+            ->with([
+                'applicant.profile:id,applicant_id,full_name',
+                'application' => fn ($q) => $q
+                    ->where('batch_id', $this->batch->id)
+                    ->with('vivaBoard:id,board_name'),
+            ])
             ->when($term !== '', function ($query) use ($term) {
                 $like = '%'.$term.'%';
                 $query->where(function ($q) use ($like) {
@@ -177,6 +182,7 @@ new #[Title('Viva Shortlist')] #[Layout('layouts.app')] class extends Component 
                 <th class="text-left font-semibold text-zinc-700 px-3 py-3">{{ __('Roll') }}</th>
                 <th class="text-left font-semibold text-zinc-700 px-3 py-3">{{ __('App. ID') }}</th>
                 <th class="text-left font-semibold text-zinc-700 px-3 py-3">{{ __('Name') }}</th>
+                <th class="text-left font-semibold text-zinc-700 px-3 py-3">{{ __('Board') }}</th>
                 <th class="text-right font-semibold text-zinc-700 px-3 py-3">{{ __('MCQ') }}</th>
                 <th class="text-right font-semibold text-zinc-700 px-3 py-3">{{ __('Written') }}</th>
                 <th class="text-right font-semibold text-zinc-700 px-3 py-3">{{ __('Total') }}</th>
@@ -195,13 +201,22 @@ new #[Title('Viva Shortlist')] #[Layout('layouts.app')] class extends Component 
                     <td class="px-3 py-3 font-semibold text-zinc-900 uppercase">
                         {{ $result->applicant?->profile?->full_name ?? '—' }}
                     </td>
+                    <td class="px-3 py-3 whitespace-nowrap">
+                        @if ($result->application?->vivaBoard)
+                            <span class="inline-flex items-center rounded-md bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand">
+                                {{ $result->application->vivaBoard->board_name }}
+                            </span>
+                        @else
+                            <span class="text-zinc-300">—</span>
+                        @endif
+                    </td>
                     <td class="px-3 py-3 text-right tabular-nums font-bold text-emerald-700">{{ number_format((float) $result->mcq_marks, 2) }}</td>
                     <td class="px-3 py-3 text-right tabular-nums text-zinc-700">{{ number_format((float) $result->written_marks, 2) }}</td>
                     <td class="px-3 py-3 text-right tabular-nums font-bold text-zinc-900">{{ number_format((float) $result->total_marks, 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-4 py-10 text-center text-zinc-500">
+                    <td colspan="8" class="px-4 py-10 text-center text-zinc-500">
                         @if ($search !== '')
                             {{ __('No eligible candidates match the current search.') }}
                         @else

@@ -1,13 +1,17 @@
 <?php
 
 use App\Enum\BatchStatusEnum;
+use App\Enums\ApplicationStatusEnum;
+use App\Enums\PaymentStatusEnum;
 use App\Enums\ResultStatusEnum;
 use App\Models\AdmissionResult;
 use App\Models\AdmissionSetting;
 use App\Models\Applicant;
 use App\Models\ApplicantProfile;
+use App\Models\Application;
 use App\Models\Batch;
 use App\Models\User;
+use App\Models\VivaBoard;
 use App\Support\CurrentBatch;
 use Livewire\Livewire;
 
@@ -92,6 +96,42 @@ it('falls back to the config threshold when the batch has no admission setting',
         ->assertViewHas('eligibleCount', 1)
         ->assertSee('Config Eligible')
         ->assertDontSee('Config Ineligible');
+});
+
+it('shows the assigned viva board for a shortlisted candidate', function () {
+    AdmissionSetting::create(['batch_id' => $this->batch->id, 'viva_mcq_threshold' => 25]);
+
+    $assigned = makeVivaResult($this->batch, '1000', 30, 'Boarded Candidate');
+    $unassigned = makeVivaResult($this->batch, '1001', 28, 'Unboarded Candidate');
+
+    $board = VivaBoard::create(['batch_id' => $this->batch->id, 'board_name' => 'Board Alpha']);
+
+    Application::create([
+        'applicant_id' => $assigned->applicant_id,
+        'batch_id' => $this->batch->id,
+        'application_number' => $this->batch->code.'-1000',
+        'roll_number' => '1000',
+        'status' => ApplicationStatusEnum::COMPLETED,
+        'payment_status' => PaymentStatusEnum::PAID,
+        'applied_at' => now(),
+        'viva_board_id' => $board->id,
+    ]);
+
+    // Unassigned candidate has an application but no board.
+    Application::create([
+        'applicant_id' => $unassigned->applicant_id,
+        'batch_id' => $this->batch->id,
+        'application_number' => $this->batch->code.'-1001',
+        'roll_number' => '1001',
+        'status' => ApplicationStatusEnum::COMPLETED,
+        'payment_status' => PaymentStatusEnum::PAID,
+        'applied_at' => now(),
+    ]);
+
+    Livewire::test('pages::admin.viva-shortlist')
+        ->assertSee('Boarded Candidate')
+        ->assertSee('Unboarded Candidate')
+        ->assertSee('Board Alpha');
 });
 
 it('filters the shortlist by search term', function () {
