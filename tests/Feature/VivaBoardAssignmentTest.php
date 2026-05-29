@@ -173,7 +173,20 @@ it('falls back to the config threshold when the batch has no admission setting',
     expect($ineligible->fresh()->viva_board_id)->toBeNull();
 });
 
-it('assigns boards from the page and confirms with a success toast', function () {
+it('previews how many candidates a run would assign', function () {
+    [$boardA] = makeBoards($this->batch, ['Board A', 'Board B']);
+
+    makeCandidate($this->batch, '1000', 30, $boardA->id); // eligible, already on a board
+    makeCandidate($this->batch, '1001', 30);              // eligible, unassigned
+    makeCandidate($this->batch, '1002', 30);              // eligible, unassigned
+    makeCandidate($this->batch, '1003', 20);              // below cutoff
+
+    $preview = $this->service->preview($this->batch);
+
+    expect($preview)->toBe(['boards' => 2, 'eligible' => 3, 'unassigned' => 2]);
+});
+
+it('confirms the assignment from the modal, then closes it with a success toast', function () {
     makeBoards($this->batch, ['Board A', 'Board B']);
 
     foreach (range(1, 3) as $i) {
@@ -182,7 +195,8 @@ it('assigns boards from the page and confirms with a success toast', function ()
 
     Livewire::test('pages::admin.viva-boards')
         ->call('assignBoards')
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast', variant: 'success')
+        ->assertDispatched('close-modal', name: 'viva-board-assign');
 
     expect(Application::where('batch_id', $this->batch->id)->whereNotNull('viva_board_id')->count())->toBe(3);
 });

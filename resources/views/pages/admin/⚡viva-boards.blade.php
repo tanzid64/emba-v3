@@ -50,6 +50,8 @@ new #[Title('Viva Board')] #[Layout('layouts.app')] class extends Component {
 
         $assigned = $service->assignUnassigned($this->batch);
 
+        $this->dispatch('close-modal', name: 'viva-board-assign');
+
         if ($assigned === 0) {
             Toast::info(__('No new candidates to assign — every eligible candidate already has a board.'));
 
@@ -169,7 +171,10 @@ new #[Title('Viva Board')] #[Layout('layouts.app')] class extends Component {
     public function with(): array
     {
         if (! $this->batch) {
-            return ['boards' => collect()];
+            return [
+                'boards' => collect(),
+                'assignPreview' => ['boards' => 0, 'eligible' => 0, 'unassigned' => 0],
+            ];
         }
 
         return [
@@ -177,6 +182,7 @@ new #[Title('Viva Board')] #[Layout('layouts.app')] class extends Component {
                 ->withCount('applications as assigned_count')
                 ->orderBy('board_name')
                 ->get(),
+            'assignPreview' => app(VivaBoardAssignmentService::class)->preview($this->batch),
         ];
     }
 }; ?>
@@ -201,12 +207,9 @@ new #[Title('Viva Board')] #[Layout('layouts.app')] class extends Component {
         @if ($batch)
             <div class="flex items-center gap-2">
                 @if ($boards->isNotEmpty())
-                    <x-ui.button variant="outline" wire:click="assignBoards"
-                        wire:loading.attr="disabled" wire:target="assignBoards">
-                        <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="assignBoards" />
-                        <x-lucide-clipboard-check wire:loading.remove wire:target="assignBoards" />
-                        <span wire:loading.remove wire:target="assignBoards">{{ __('Assign Board') }}</span>
-                        <span wire:loading wire:target="assignBoards">{{ __('Assigning…') }}</span>
+                    <x-ui.button variant="outline" icon="clipboard-check"
+                        x-on:click="$dispatch('open-modal', { name: 'viva-board-assign' })">
+                        {{ __('Assign Board') }}
                     </x-ui.button>
                 @endif
                 <x-ui.button variant="primary" icon="plus" wire:click="openCreateModal">
@@ -352,4 +355,59 @@ new #[Title('Viva Board')] #[Layout('layouts.app')] class extends Component {
             </x-ui.button>
         </div>
     </x-ui.modal>
+
+    {{-- ===================== ASSIGN CONFIRM MODAL ===================== --}}
+    @if ($batch)
+        <x-ui.modal name="viva-board-assign" :title="__('Assign Viva Boards')" maxWidth="lg">
+            {{-- Pre-flight reminder --}}
+            <div class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <x-lucide-alert-triangle class="size-5 shrink-0 text-amber-600 mt-0.5" />
+                <p class="text-sm text-zinc-700 leading-relaxed">
+                    {{ __('Make sure all MCQ exam marks have been uploaded first. Viva eligibility is based on the MCQ cutoff, so any candidate whose marks are not in yet will be left out of this assignment.') }}
+                </p>
+            </div>
+
+            {{-- What will happen --}}
+            <div class="mt-4 space-y-4">
+                <p class="text-sm text-zinc-700 leading-relaxed">
+                    {{ __('Confirming will distribute the viva-eligible candidates who do not yet have a board across the boards in this batch, filling the least-full board first. Candidates already assigned to a board will not be moved.') }}
+                </p>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center">
+                        <p class="text-xs font-medium text-zinc-500">{{ __('Eligible') }}</p>
+                        <p class="mt-1 text-2xl font-bold text-zinc-900 tabular-nums">{{ number_format($assignPreview['eligible']) }}</p>
+                    </div>
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">{{ __('To assign now') }}</p>
+                        <p class="mt-1 text-2xl font-bold text-emerald-700 tabular-nums">{{ number_format($assignPreview['unassigned']) }}</p>
+                    </div>
+                    <div class="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center">
+                        <p class="text-xs font-medium text-zinc-500">{{ __('Boards') }}</p>
+                        <p class="mt-1 text-2xl font-bold text-zinc-900 tabular-nums">{{ number_format($assignPreview['boards']) }}</p>
+                    </div>
+                </div>
+
+                @if ($assignPreview['unassigned'] === 0)
+                    <p class="text-xs text-zinc-500">
+                        {{ __('Every eligible candidate already has a board — there is nothing to assign right now.') }}
+                    </p>
+                @endif
+            </div>
+
+            <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+                <x-ui.button variant="ghost"
+                    x-on:click="$dispatch('close-modal', { name: 'viva-board-assign' })">
+                    {{ __('Cancel') }}
+                </x-ui.button>
+                <x-ui.button variant="primary" wire:click="assignBoards" wire:loading.attr="disabled"
+                    wire:target="assignBoards" :disabled="$assignPreview['unassigned'] === 0">
+                    <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="assignBoards" />
+                    <x-lucide-check wire:loading.remove wire:target="assignBoards" />
+                    <span wire:loading.remove wire:target="assignBoards">{{ __('Confirm & assign') }}</span>
+                    <span wire:loading wire:target="assignBoards">{{ __('Assigning…') }}</span>
+                </x-ui.button>
+            </div>
+        </x-ui.modal>
+    @endif
 </div>

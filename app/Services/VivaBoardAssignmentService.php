@@ -6,6 +6,7 @@ use App\Models\AdmissionResult;
 use App\Models\Application;
 use App\Models\Batch;
 use App\Models\VivaBoard;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -44,11 +45,7 @@ class VivaBoardAssignmentService
             return 0;
         }
 
-        $threshold = $this->threshold($batch);
-
-        $eligibleApplicantIds = AdmissionResult::where('batch_id', $batch->id)
-            ->where('mcq_marks', '>=', $threshold)
-            ->pluck('applicant_id');
+        $eligibleApplicantIds = $this->eligibleApplicantIds($batch);
 
         if ($eligibleApplicantIds->isEmpty()) {
             return 0;
@@ -96,6 +93,43 @@ class VivaBoardAssignmentService
         });
 
         return $unassigned->count();
+    }
+
+    /**
+     * Read-only summary of what an assignment run would do right now:
+     * how many boards exist, how many candidates are viva-eligible, and
+     * how many of those still have no board (i.e. would be assigned).
+     *
+     * @return array{boards: int, eligible: int, unassigned: int}
+     */
+    public function preview(Batch $batch): array
+    {
+        $eligibleApplicantIds = $this->eligibleApplicantIds($batch);
+
+        $unassigned = $eligibleApplicantIds->isEmpty()
+            ? 0
+            : Application::where('batch_id', $batch->id)
+                ->whereIn('applicant_id', $eligibleApplicantIds)
+                ->whereNull('viva_board_id')
+                ->count();
+
+        return [
+            'boards' => VivaBoard::where('batch_id', $batch->id)->count(),
+            'eligible' => $eligibleApplicantIds->count(),
+            'unassigned' => $unassigned,
+        ];
+    }
+
+    /**
+     * Applicant ids in the batch whose MCQ marks clear the viva cutoff.
+     *
+     * @return Collection<int, int>
+     */
+    private function eligibleApplicantIds(Batch $batch): Collection
+    {
+        return AdmissionResult::where('batch_id', $batch->id)
+            ->where('mcq_marks', '>=', $this->threshold($batch))
+            ->pluck('applicant_id');
     }
 
     /**
