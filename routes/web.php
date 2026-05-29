@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('admit-cards', 'pages::admin.admit-cards')->name('admit-cards.index');
         Route::livewire('viva-shortlist', 'pages::admin.viva-shortlist')->name('viva-shortlist.index');
         Route::livewire('viva-boards', 'pages::admin.viva-boards')->name('viva-boards.index');
+        Route::livewire('viva-admit-cards', 'pages::admin.viva-admit-cards')->name('viva-admit-cards.index');
         Route::livewire('exam-results', 'pages::admin.exam-results')->name('exam-results.index');
         Route::livewire('applicants/{application}', 'pages::admin.applicant-show')->name('applicants.show');
         Route::livewire('applicants/{application}/edit', 'pages::admin.applicant-edit')->name('applicants.edit');
@@ -49,6 +50,8 @@ Route::group([
         ->name('payment-receipt');
     Route::get('admit-card/{appNo}', [PDFController::class, 'generateAdmitCardPDF'])
         ->name('admit-card');
+    Route::get('viva-admit-card/{appNo}', [PDFController::class, 'generateVivaAdmitCardPDF'])
+        ->name('viva-admit-card');
 });
 
 // Admin-only batch/room reporting PDFs (attendance sheets, seat labels).

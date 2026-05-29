@@ -40,6 +40,7 @@ Route::prefix('applicant')->name('applicant.')->group(function () {
             Route::livewire('application', 'pages::applicant.application')->name('application');
             Route::livewire('payments', 'pages::applicant.payments')->name('payments');
             Route::livewire('admit-card', 'pages::applicant.admit-card')->name('admit-card');
+            Route::livewire('viva-admit-card', 'pages::applicant.viva-admit-card')->name('viva-admit-card');
 
             Route::prefix('payment/bkash')->name('payment.bkash.')->group(function () {
                 Route::post('initiate', [BkashController::class, 'initiate'])->name('initiate');

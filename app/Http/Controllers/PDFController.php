@@ -128,6 +128,56 @@ class PDFController extends Controller
     }
 
     /**
+     * Stream (or download) the applicant's viva admit card as a PDF.
+     * Visible to the owning applicant and to any admin user. The card
+     * needs a viva board to be meaningful, so an application that has not
+     * been assigned one yields a 404.
+     */
+    public function generateVivaAdmitCardPDF(string $appNo, Request $request)
+    {
+        $application = Application::where('application_number', $appNo)
+            ->with(['batch.admissionSetting', 'vivaBoard', 'applicant.profile'])
+            ->firstOrFail();
+
+        $this->ensureCanAccess($request, $application->applicant_id);
+
+        abort_if($application->viva_board_id === null, 404);
+
+        $profile = $application->applicant?->profile;
+
+        $student = (object) [
+            'application_id' => $application->application_number,
+            'full_name' => $profile?->full_name,
+            'father_name' => $profile?->father_name,
+            'mother_name' => $profile?->mother_name,
+            'mobile' => $application->applicant?->phone_number,
+            'photo_path' => $profile?->photo_path,
+        ];
+
+        // Blade reads `$rollAssignment->roll` and `$rollAssignment->vivaBoard->*`.
+        $rollAssignment = (object) [
+            'roll' => $application->roll_number,
+            'vivaBoard' => $application->vivaBoard,
+        ];
+
+        $batch = $application->batch;
+
+        $verifyUrl = URL::signedRoute('verify.application', [
+            'appNo' => $application->application_number,
+        ]);
+
+        $filename = "EMBA_VIVA_ADMIT_CARD_{$application->roll_number}.pdf";
+
+        $pdf = PDF::loadView('pdfs.viva-admit-card', compact('student', 'rollAssignment', 'batch', 'verifyUrl'), [], [
+            'title' => "EMBA_Viva_Admit_Card_{$application->roll_number}",
+        ]);
+
+        return $request->input('action') === 'download'
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
+    }
+
+    /**
      * Stream the exam-results report for a batch as a PDF download.
      * Admin-only. Reads three optional query params used to filter the
      * rows, matching the Excel export contract:

@@ -123,6 +123,9 @@
                     <flux:sidebar.item icon="users" :href="route('admin.viva-boards.index')" :current="request()->routeIs('admin.viva-boards.*')" wire:navigate>
                         {{ __('Viva Board') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="ticket" :href="route('admin.viva-admit-cards.index')" :current="request()->routeIs('admin.viva-admit-cards.*')" wire:navigate>
+                        {{ __('Viva Admit Cards') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="trophy" :href="route('admin.exam-results.index')" :current="request()->routeIs('admin.exam-results.*')" wire:navigate>
                         {{ __('Exam Results') }}
                     </flux:sidebar.item>

@@ -19,6 +19,7 @@ class AdmissionSetting extends Model
         'intake_ended_at' => DateFormatCast::class,
         'application_payment_ended_at' => DateFormatCast::class,
         'admit_card_published_at' => DateFormatCast::class,
+        'viva_admit_card_published_at' => DateFormatCast::class,
         'exam_center_uploaded_at' => DateFormatCast::class,
         'exam_date' => DateFormatCast::class,
         'viva_date' => DateFormatCast::class,
@@ -30,6 +31,7 @@ class AdmissionSetting extends Model
         'is_application_open',
         'is_application_payment_open',
         'is_admit_card_published',
+        'is_viva_admit_card_published',
         'is_result_published',
         'is_exam_center_uploaded',
     ];
@@ -78,6 +80,11 @@ class AdmissionSetting extends Model
         $rawAdmitCardPublishedAt = $this->getRawOriginal('admit_card_published_at');
 
         return ! is_null($rawAdmitCardPublishedAt);
+    }
+
+    public function getIsVivaAdmitCardPublishedAttribute()
+    {
+        return ! is_null($this->getRawOriginal('viva_admit_card_published_at'));
     }
 
     public function getIsExamCenterUploadedAttribute()
