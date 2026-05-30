@@ -4,6 +4,7 @@ use App\Enums\ResultStatusEnum;
 use App\Http\Controllers\ExcelExportController;
 use App\Http\Controllers\PDFController;
 use App\Models\AdmissionResult;
+use App\Models\AdmissionSetting;
 use App\Models\Batch;
 use App\Services\ExamMarksUploadService;
 use App\Services\ResultGenerationService;
@@ -33,6 +34,8 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
 
     public ?Batch $batch = null;
 
+    public ?AdmissionSetting $admissionSetting = null;
+
     // Marks CSV — wired up in the upload modal.
     public $csv = null;
 
@@ -48,7 +51,52 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
 
     public function mount(): void
     {
-        $this->batch = CurrentBatch::get();
+        $this->batch = CurrentBatch::get()?->loadMissing('admissionSetting');
+        $this->admissionSetting = $this->batch?->admissionSetting;
+    }
+
+    public function isResultPublished(): bool
+    {
+        return (bool) $this->admissionSetting?->is_result_published;
+    }
+
+    public function openPublishModal(): void
+    {
+        $this->dispatch('open-modal', name: 'publish-result');
+    }
+
+    public function closePublishModal(): void
+    {
+        $this->dispatch('close-modal', name: 'publish-result');
+    }
+
+    /**
+     * Publish or unpublish the batch's result. Publishing stamps
+     * result_published_at (which flips AdmissionSetting::is_result_published),
+     * making each applicant's result visible on the portal; unpublishing
+     * clears it again without touching any result data.
+     */
+    public function togglePublishResult(): void
+    {
+        if (! $this->admissionSetting) {
+            Toast::error(__('This batch has no admission settings yet.'));
+
+            return;
+        }
+
+        $publishing = ! $this->isResultPublished();
+
+        $this->admissionSetting->update([
+            'result_published_at' => $publishing ? now() : null,
+        ]);
+
+        $this->admissionSetting->refresh();
+
+        $this->dispatch('close-modal', name: 'publish-result');
+
+        Toast::success($publishing
+            ? __('Result published — applicants can now see their result in the portal.')
+            : __('Result unpublished — it is now hidden from applicants.'));
     }
 
     public function updatedSearch(): void
@@ -346,9 +394,25 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
                 <x-ui.button variant="primary" icon="trophy" wire:click="openGenerateMeritModal">
                     {{ __('Generate Merit List') }}
                 </x-ui.button>
+                @if ($this->isResultPublished())
+                    <x-ui.button variant="outline" icon="eye-off" wire:click="openPublishModal">
+                        {{ __('Unpublish Result') }}
+                    </x-ui.button>
+                @else
+                    <x-ui.button variant="primary" icon="megaphone" wire:click="openPublishModal">
+                        {{ __('Publish Result') }}
+                    </x-ui.button>
+                @endif
             </div>
         @endif
     </div>
+
+    @if ($batch && $this->isResultPublished())
+        <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+            <x-lucide-circle-check class="size-4 shrink-0 text-emerald-600" />
+            {{ __('Result is published — applicants can see their result in the portal.') }}
+        </div>
+    @endif
 
     @if (! $batch)
         <div class="rounded-xl border border-dashed border-zinc-200 bg-white px-6 py-16 text-center">
@@ -705,6 +769,70 @@ new #[Title('Exam Results')] #[Layout('layouts.app')] class extends Component {
                     <span wire:loading wire:target="exportExcel">{{ __('Building…') }}</span>
                 </x-ui.button>
             </div>
+        @endif
+    </x-ui.modal>
+
+    {{-- ===================== PUBLISH / UNPUBLISH RESULT MODAL ===================== --}}
+    <x-ui.modal name="publish-result"
+        :title="$this->isResultPublished() ? __('Unpublish Result') : __('Publish Result')" maxWidth="md">
+        @if ($batch)
+            @if ($this->isResultPublished())
+                <div class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                    <x-lucide-alert-triangle class="size-5 shrink-0 text-amber-600 mt-0.5" />
+                    <div class="text-sm text-zinc-700 leading-relaxed">
+                        <p class="font-semibold text-amber-800">{{ __('This will hide the result from applicants again.') }}</p>
+                        <ul class="list-disc list-inside space-y-1 mt-1">
+                            <li>{{ __('Applicants will no longer see their pass / fail status, merit position or marks in the portal.') }}</li>
+                            <li>{{ __('No result data is deleted — you can publish again at any time.') }}</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+                    <x-ui.button variant="ghost" wire:click="closePublishModal">
+                        {{ __('Cancel') }}
+                    </x-ui.button>
+                    <x-ui.button variant="danger" wire:click="togglePublishResult" wire:loading.attr="disabled"
+                        wire:target="togglePublishResult">
+                        <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="togglePublishResult" />
+                        <x-lucide-eye-off wire:loading.remove wire:target="togglePublishResult" />
+                        <span wire:loading.remove wire:target="togglePublishResult">{{ __('Unpublish result') }}</span>
+                        <span wire:loading wire:target="togglePublishResult">{{ __('Unpublishing…') }}</span>
+                    </x-ui.button>
+                </div>
+            @else
+                <div class="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <x-lucide-megaphone class="size-5 shrink-0 text-emerald-600 mt-0.5" />
+                    <div class="text-sm text-zinc-700 leading-relaxed">
+                        <p class="font-semibold text-emerald-800">{{ __('This makes the final result visible to every applicant in this batch.') }}</p>
+                        <ul class="list-disc list-inside space-y-1 mt-1">
+                            <li>{{ __('Each applicant will see their pass / fail status, merit position (if selected) and full mark breakdown.') }}</li>
+                            <li>{{ __('Make sure every mark is uploaded and the merit list is generated — publish only when the result is final.') }}</li>
+                            <li>{{ __('You can unpublish later if a correction is needed.') }}</li>
+                        </ul>
+                        <p class="mt-2 font-medium text-zinc-700">
+                            {{ __(':total candidate(s) · :passed passed · :failed failed will be published.', [
+                                'total' => number_format($totalCount),
+                                'passed' => number_format($passedCount),
+                                'failed' => number_format($failedCount),
+                            ]) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-zinc-100">
+                    <x-ui.button variant="ghost" wire:click="closePublishModal">
+                        {{ __('Cancel') }}
+                    </x-ui.button>
+                    <x-ui.button variant="primary" wire:click="togglePublishResult" wire:loading.attr="disabled"
+                        wire:target="togglePublishResult">
+                        <x-lucide-loader-2 class="animate-spin" wire:loading wire:target="togglePublishResult" />
+                        <x-lucide-megaphone wire:loading.remove wire:target="togglePublishResult" />
+                        <span wire:loading.remove wire:target="togglePublishResult">{{ __('Publish result') }}</span>
+                        <span wire:loading wire:target="togglePublishResult">{{ __('Publishing…') }}</span>
+                    </x-ui.button>
+                </div>
+            @endif
         @endif
     </x-ui.modal>
 </div>
