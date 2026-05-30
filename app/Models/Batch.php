@@ -4,13 +4,18 @@ namespace App\Models;
 
 use App\Casts\DateFormatCast;
 use App\Enum\BatchStatusEnum;
+use Database\Factories\BatchFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Batch extends Model
 {
+    /** @use HasFactory<BatchFactory> */
+    use HasFactory;
+
     protected $guarded = [];
 
     protected $casts = [
